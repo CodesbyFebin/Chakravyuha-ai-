@@ -32,6 +32,7 @@ export default function HudFrame() {
         <input id="api-base" type="url" placeholder="Optional: https://your-api.example.com" value={draft} onChange={event => setDraft(event.target.value)} />
         <button type="submit">Save</button>
       </form>
+      <a className="download" href="https://codesbyfebin.github.io/Chakravyuha-ai-/downloads/chakravyuha-command-center-v3.7.1.zip">↓ INSTALL PACKAGE</a>
       <span className="connection"><i />{apiBase ? 'API endpoint set' : 'Static demo mode'}</span>
     </header>
     <main className="hud-shell">

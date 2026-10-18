@@ -27,6 +27,12 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Assemble downloadable install package
+        run: |
+          mkdir -p public/downloads .package
+          cp package/README.md package/install.sh package/install.ps1 .package/
+          cp public/chakravyuha_command_center.html backend/server.py backend/requirements.txt .package/
+          (cd .package && zip -q -r ../public/downloads/chakravyuha-command-center-v3.7.1.zip .)
       - name: Build static export
         run: npm run build
         env:

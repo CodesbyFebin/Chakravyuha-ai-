@@ -1,23 +1,19 @@
 # Chakravyuha AI Command Center
 
-Next.js static export for GitHub Pages with the v3.7.1 37-widget mission control HUD.
+Public GitHub Pages demo and downloadable local install package for the v3.7.1 37-widget mission control HUD.
 
-- HUD source: `public/chakravyuha_command_center.html`
-- Next.js shell: `app/`
-- GitHub Pages deploy workflow: `.github/workflows/deploy.yml`
-- Optional FastAPI + SQLite service: `backend/`
+- **Live public demo:** <https://codesbyfebin.github.io/Chakravyuha-ai-/>
+- **Download and install:** use the **↓ INSTALL PACKAGE** button on the demo, or [download the ZIP](https://codesbyfebin.github.io/Chakravyuha-ai-/downloads/chakravyuha-command-center-v3.7.1.zip).
+- **HUD source:** `public/chakravyuha_command_center.html`
+- **FastAPI + SQLite backend:** `backend/`
+- **GitHub Pages deploy:** `.github/workflows/deploy.yml`
 
-## Run locally
+## Local install
 
-```bash
-npm install
-npm run dev
-```
+Download and unzip the package. On Windows, run `install.ps1` from PowerShell. On macOS or Linux, run `chmod +x install.sh && ./install.sh`. The installer creates a Python virtual environment, installs dependencies, and starts the local HUD and backend at <http://127.0.0.1:8000/>. The SQLite database is created beside the package and persists locally.
 
-Open `http://localhost:3000/`.
+## Hosting and privacy
 
-## Deploy with GitHub Pages
+GitHub Pages publishes the static demo and package publicly. The separately configured Vercel project is kept SSO protected for private work. GitHub Pages serves static files only; API-backed state is available in the downloaded local package or when the demo is configured with a separately hosted HTTPS backend.
 
-Push to `main`; the workflow builds a static Next.js export with the GitHub Pages subpath and deploys it to Pages. Vercel builds without that subpath and serves the app at the project root. In repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. The expected project URL is `https://codesbyfebin.github.io/Chakravyuha-ai-/`.
-
-GitHub Pages serves static files only. Widget UI interactions and local fallback behavior run in the browser. To use API-backed data, deploy `backend/server.py` separately and save its HTTPS base URL in the **Backend API** field. The SQLite database is initialized at runtime and must use persistent storage on that host.
+The included API has no authentication and exposes an interactive terminal endpoint. Keep it local; do not expose it to the public internet. Trading, balances, telemetry, and agent status shown by the demo are simulated example data.
