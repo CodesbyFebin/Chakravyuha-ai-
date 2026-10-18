@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+const apiEnabled = process.env.NEXT_PUBLIC_API_ENABLED === 'true';
 const storageKey = 'chakravyuha-api-base';
 
 export default function HudFrame() {
@@ -33,11 +34,11 @@ export default function HudFrame() {
         <button type="submit">Save</button>
       </form>
       <a className="download" href="https://codesbyfebin.github.io/Chakravyuha-ai-/downloads/chakravyuha-command-center-v3.7.1.zip">↓ INSTALL PACKAGE</a>
-      <span className="connection"><i />{apiBase ? 'API endpoint set' : 'Static demo mode'}</span>
+      <span className="connection"><i />{apiBase ? 'API endpoint set' : apiEnabled ? 'Vercel API ready' : 'Static demo mode'}</span>
     </header>
     <main className="hud-shell">
       <iframe title="Chakravyuha 37-widget mission control HUD" src={src} allow="clipboard-read; clipboard-write" />
     </main>
-    <footer className="footnote">37-widget HUD · v3.7.1 · {apiBase ? 'Backend requests use your configured endpoint.' : 'Connect a separately hosted FastAPI backend to enable API-backed state.'}</footer>
+    <footer className="footnote">37-widget HUD · v3.7.1 · {apiBase ? 'Backend requests use your configured endpoint.' : apiEnabled ? 'FastAPI backend with persistent Neon PostgreSQL state.' : 'GitHub Pages static demo. Download the package for a local SQLite-backed install.'}</footer>
   </>;
 }

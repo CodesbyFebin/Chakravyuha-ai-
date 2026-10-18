@@ -5,7 +5,7 @@ Public GitHub Pages demo and downloadable local install package for the v3.7.1 3
 - **Live public demo:** <https://codesbyfebin.github.io/Chakravyuha-ai-/>
 - **Download and install:** use the **↓ INSTALL PACKAGE** button on the demo, or [download the ZIP](https://codesbyfebin.github.io/Chakravyuha-ai-/downloads/chakravyuha-command-center-v3.7.1.zip).
 - **HUD source:** `public/chakravyuha_command_center.html`
-- **FastAPI + SQLite backend:** `backend/`
+- **FastAPI backend:** `backend/` (SQLite locally, Neon PostgreSQL on Vercel)
 - **GitHub Pages deploy:** `.github/workflows/deploy.yml`
 
 ## Local install
@@ -14,6 +14,6 @@ Download and unzip the package. On Windows, run `install.ps1` from PowerShell. O
 
 ## Hosting and privacy
 
-GitHub Pages publishes the static demo and package publicly. The separately configured Vercel project is kept SSO protected for private work. GitHub Pages serves static files only; API-backed state is available in the downloaded local package or when the demo is configured with a separately hosted HTTPS backend.
+GitHub Pages publishes the static demo and package publicly. The Vercel project remains SSO protected for private work, with FastAPI functions backed by persistent Neon PostgreSQL. The downloadable local package uses SQLite and persists on the local machine.
 
-The included API has no authentication and exposes an interactive terminal endpoint. Keep it local; do not expose it to the public internet. Trading, balances, telemetry, and agent status shown by the demo are simulated example data.
+The API exposes an interactive terminal endpoint; keep Vercel deployment protection enabled. Trading, balances, telemetry, and agent status shown by the HUD are simulated example data.

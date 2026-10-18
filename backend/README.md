@@ -12,4 +12,8 @@ pip install -r requirements.txt
 python server.py
 ```
 
-The SQLite database is initialized at runtime. It is ignored by git and persists on a local machine. For remote hosting, use persistent storage and HTTPS, configure an explicit database path with `CHAKRAVYUHA_DB`, and add authentication before exposing this API. The API includes an interactive terminal command endpoint and should remain local unless secured.
+The SQLite database is initialized at runtime, ignored by git, and persists on a local machine. When `POSTGRES_URL` or `DATABASE_URL` is set, the service uses PostgreSQL instead; the Vercel project receives encrypted connection variables from its connected Neon database. SQLite remains the default for the downloadable local package.
+
+The root `api/index.py` exports this FastAPI app as a Vercel Python Function. Next.js rewrites `/api/*` to that function on Vercel and to the local FastAPI server during `next dev`. GitHub Pages builds use static export and do not include API credentials.
+
+The API includes a simulated terminal command endpoint. Keep Vercel deployment protection enabled; the project's SSO protection is required for private use.
