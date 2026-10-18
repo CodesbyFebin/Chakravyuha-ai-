@@ -14,6 +14,7 @@ import sqlite3
 import tempfile
 import threading
 import time
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -26,7 +27,68 @@ _NET_PREV = {"bytes": 0, "ts": time.time()}
 _DB_LOCK = threading.Lock()
 
 
-def _resolve_db_path() -> Path:
+DATABASE_URL = os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL")
+
+
+class _CursorAdapter:
+    """Keep the existing sqlite-style SQL portable to Neon Postgres."""
+    def __init__(self, cursor: Any, postgres: bool = False) -> None:
+        self._cursor = cursor
+        self._postgres = postgres
+
+    def execute(self, sql: str, params: Any = ()) -> Any:
+        if self._postgres:
+            sql = sql.replace("?", "%s")
+        self._cursor.execute(sql, params)
+        return self
+
+    def executemany(self, sql: str, params: Any) -> Any:
+        if self._postgres:
+            sql = sql.replace("?", "%s")
+        self._cursor.executemany(sql, params)
+        return self
+
+    def executescript(self, sql: str) -> Any:
+        if self._postgres:
+            sql = re.sub(r"INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT", "BIGSERIAL PRIMARY KEY", sql, flags=re.I)
+        self._cursor.execute(sql)
+        return self
+
+    def fetchone(self) -> Any:
+        return self._cursor.fetchone()
+
+    def fetchall(self) -> Any:
+        return self._cursor.fetchall()
+
+    @property
+    def lastrowid(self) -> Any:
+        return getattr(self._cursor, "lastrowid", None)
+
+
+class _ConnectionAdapter:
+    def __init__(self, connection: Any, postgres: bool = False) -> None:
+        self._connection = connection
+        self.postgres = postgres
+
+    def cursor(self) -> _CursorAdapter:
+        if self.postgres:
+            from psycopg2.extras import RealDictCursor
+            return _CursorAdapter(self._connection.cursor(cursor_factory=RealDictCursor), True)
+        return _CursorAdapter(self._connection.cursor())
+
+    def execute(self, sql: str, params: Any = ()) -> _CursorAdapter:
+        return self.cursor().execute(sql, params)
+
+    def commit(self) -> None:
+        self._connection.commit()
+
+    def close(self) -> None:
+        self._connection.close()
+
+
+def _resolve_db_path() -> Optional[Path]:
+    if DATABASE_URL:
+        return None
     env_path = os.environ.get("CHAKRAVYUHA_DB")
     if env_path:
         return Path(env_path)
@@ -44,7 +106,11 @@ def _resolve_db_path() -> Path:
 DB_PATH = _resolve_db_path()
 
 
-def get_db() -> sqlite3.Connection:
+def get_db() -> Any:
+    if DATABASE_URL:
+        import psycopg2
+        raw = psycopg2.connect(DATABASE_URL, connect_timeout=10)
+        return _ConnectionAdapter(raw, postgres=True)
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     try:
@@ -59,7 +125,7 @@ def compute_sha256(payload: str) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def create_receipt(conn: sqlite3.Connection, category: str, action: str, actor: str, details: Dict[str, Any]) -> Dict[str, Any]:
+def create_receipt(conn: Any, category: str, action: str, actor: str, details: Dict[str, Any]) -> Dict[str, Any]:
     cur = conn.cursor()
     cur.execute("SELECT receipt_hash FROM receipts ORDER BY id DESC LIMIT 1")
     row = cur.fetchone()
@@ -74,16 +140,20 @@ def create_receipt(conn: sqlite3.Connection, category: str, action: str, actor: 
         "details": details,
     }, sort_keys=True)
     receipt_hash = compute_sha256(canonical)
-    cur.execute(
-        """
+    receipt_insert = """
         INSERT INTO receipts (timestamp, category, action, actor, details_json, prev_hash, receipt_hash)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-        """,
+        """
+    if getattr(conn, "postgres", False):
+        receipt_insert += " RETURNING id"
+    cur.execute(
+        receipt_insert,
         (ts, category, action, actor, json.dumps(details), prev_hash, receipt_hash),
     )
+    receipt_id = cur.fetchone()["id"] if getattr(conn, "postgres", False) else cur.lastrowid
     conn.commit()
     return {
-        "id": cur.lastrowid,
+        "id": receipt_id,
         "timestamp": ts,
         "category": category,
         "action": action,
@@ -107,6 +177,10 @@ def init_db() -> None:
     with _DB_LOCK:
         conn = get_db()
         cur = conn.cursor()
+
+        if getattr(conn, "postgres", False):
+            # Serialize cold-start initialization across concurrent Vercel instances.
+            cur.execute("SELECT pg_advisory_xact_lock(371701)")
 
         cur.executescript(
             """
@@ -605,6 +679,7 @@ def build_full_state() -> Dict[str, Any]:
             "name": "CHAKRAVYUHA",
             "version": "3.7.1",
             "widgets_total": 37,
+            "database_engine": "Neon PostgreSQL" if DATABASE_URL else "SQLite",
             "frozen": sys_rows.get("frozen", "false") == "true",
             "aura_state": sys_rows.get("aura_state", "idle"),
             "budget_limit_usd": float(sys_rows.get("budget_limit_usd", "20.0")),

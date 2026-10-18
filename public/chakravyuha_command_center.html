@@ -1484,7 +1484,7 @@ async function syncBackendNow() {
   const t0 = performance.now();
   const data = await apiCall('/api/state', 'GET');
   if (data) {
-    showToast('BACKEND SYNC', `Connected to FastAPI + SQLite3 server (${AppState.system.api_rtt_ms}ms RTT).`);
+    showToast('BACKEND SYNC', `Connected to FastAPI + ${AppState.system.database_engine || 'database'} (${AppState.system.api_rtt_ms}ms RTT).`);
   } else {
     const elapsedSec = Math.floor((Date.now() - BOOT_START_MS) / 1000);
     const mins = Math.floor(elapsedSec / 60), secs = elapsedSec % 60;
@@ -2531,7 +2531,7 @@ function renderThoughts() {
 function renderReadouts() {
   const sys = AppState.system, tel = AppState.telemetry;
   document.getElementById('backend-mode-badge').textContent = backendConnected
-    ? '◉ BACKEND: LIVE FASTAPI + SQLITE3'
+    ? `◉ BACKEND: LIVE FASTAPI + ${sys.database_engine || 'DATABASE'}`
     : '◉ ENGINE: STANDALONE HARNESS';
   document.getElementById('backend-mode-badge').style.color = backendConnected ? '#00ff88' : '#ffaa00';
   document.getElementById('top-receipts-btn').textContent = `📜 RECEIPTS (${sys.receipts_total})`;
