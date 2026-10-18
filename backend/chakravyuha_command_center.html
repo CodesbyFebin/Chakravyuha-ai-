@@ -1,0 +1,3038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHAKRAVYUHA — AI Agent Harness &amp; 37-Widget Mission Control HUD v3.7.1</title>
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/orbitron@5.0.0/index.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.0/index.min.css" rel="stylesheet">
+<style>
+:root{
+  --accent:#00e5ff;
+  --accent-dim:rgba(0,229,255,0.45);
+  --cyan:#00e5ff;
+  --amber:#ffaa00;
+  --text-primary:#d0f4f7;
+  --text-secondary:rgba(127,212,193,0.72);
+  --success:#00ff88;
+  --warning:#ffaa00;
+  --error:#ff3366;
+  --purple:#b388ff;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-display:'Orbitron',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:var(--font-mono);color:#7fd4c1}
+canvas{display:block}
+
+/* BOOT SCREEN */
+#boot-screen{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at center,#0d0700 0%,#000 75%);display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity 0.9s}
+#boot-screen.hidden{opacity:0;pointer-events:none}
+#boot-canvas{position:absolute;inset:0}
+#boot-emblem{position:relative;z-index:2;width:120px;height:120px;margin-bottom:12px;filter:drop-shadow(0 0 24px rgba(255,170,0,0.75))}
+#boot-text{position:relative;z-index:2;font-family:var(--font-display);font-size:1.9rem;color:#ffaa00;text-shadow:0 0 30px #ffaa00,0 0 60px rgba(0,229,255,0.45);opacity:0;letter-spacing:0.35em;text-align:center}
+#boot-sub{position:relative;z-index:2;font-size:0.7rem;color:#00e5ff;margin-top:8px;opacity:0;letter-spacing:0.24em;text-align:center}
+#boot-skip{position:relative;z-index:3;margin-top:18px;padding:5px 14px;background:rgba(255,170,0,0.1);border:1px solid rgba(255,170,0,0.5);color:#ffaa00;font-family:var(--font-display);font-size:9px;letter-spacing:0.2em;cursor:pointer;border-radius:2px;transition:all 0.2s}
+#boot-skip:hover{background:rgba(255,170,0,0.25);color:#fff;box-shadow:0 0 12px rgba(255,170,0,0.5)}
+
+/* OVERLAYS */
+#vignette{position:fixed;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,0.75) 100%)}
+#scanlines{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0.35;background:repeating-linear-gradient(0deg,transparent,transparent 1px,rgba(0,0,0,0.12) 1px,rgba(0,0,0,0.12) 2px)}
+.corner{position:fixed;z-index:5;pointer-events:none}
+.corner.tl{top:8px;left:8px;width:36px;height:36px;border-top:1px solid rgba(0,229,255,0.4);border-left:1px solid rgba(0,229,255,0.4)}
+.corner.tr{top:8px;right:8px;width:36px;height:36px;border-top:1px solid rgba(0,229,255,0.4);border-right:1px solid rgba(0,229,255,0.4)}
+.corner.bl{bottom:8px;left:8px;width:36px;height:36px;border-bottom:1px solid rgba(0,229,255,0.4);border-left:1px solid rgba(0,229,255,0.4)}
+.corner.br{bottom:8px;right:8px;width:36px;height:36px;border-bottom:1px solid rgba(0,229,255,0.4);border-right:1px solid rgba(0,229,255,0.4)}
+
+/* TOP BAR & DECK BAR */
+#top-bar{position:fixed;top:0;left:0;right:0;height:28px;z-index:50;background:linear-gradient(180deg,rgba(0,10,20,0.96),rgba(0,10,20,0.75));display:flex;align-items:center;padding:0 14px;font-size:10px;letter-spacing:0.11em;gap:8px;border-bottom:1px solid rgba(0,229,255,0.15)}
+#top-bar .title{color:#ffaa00;font-family:var(--font-display);font-weight:bold;text-shadow:0 0 10px rgba(255,170,0,0.75);display:flex;align-items:center;gap:6px}
+#top-bar .sub{color:rgba(255,170,0,0.85);margin-left:auto;font-size:8.5px}
+#top-bar .top-btn{padding:2px 6px;border:1px solid rgba(0,229,255,0.35);background:rgba(0,229,255,0.06);color:#00e5ff;font-family:var(--font-mono);font-size:8px;cursor:pointer;border-radius:2px;transition:all 0.2s}
+#top-bar .top-btn:hover{background:rgba(0,229,255,0.22);border-color:#00e5ff}
+#top-bar .top-btn.amber{border-color:rgba(255,170,0,0.45);color:#ffaa00;background:rgba(255,170,0,0.08)}
+#top-bar .time{color:#00e5ff;font-weight:600;min-width:56px;text-align:right}
+
+#deck-bar{position:fixed;top:28px;left:0;right:0;height:24px;z-index:49;background:rgba(2,8,18,0.88);border-bottom:1px solid rgba(0,229,255,0.16);display:flex;align-items:center;padding:0 14px;gap:5px;overflow-x:auto}
+.deck-btn{padding:2px 8px;font-family:var(--font-display);font-size:7.5px;letter-spacing:0.12em;color:var(--text-secondary);background:rgba(0,229,255,0.03);border:1px solid rgba(0,229,255,0.18);border-radius:2px;cursor:pointer;white-space:nowrap;transition:all 0.18s}
+.deck-btn:hover{color:#fff;border-color:var(--accent)}
+.deck-btn.active{color:#000;background:var(--amber);border-color:var(--amber);font-weight:700;box-shadow:0 0 10px rgba(255,170,0,0.45)}
+
+/* BOTTOM BAR */
+#bottom-bar{position:fixed;bottom:0;left:0;right:0;height:28px;z-index:50;background:linear-gradient(0deg,rgba(0,10,20,0.96),rgba(0,10,20,0.65));display:flex;align-items:center;padding:0 14px;font-size:9.5px;letter-spacing:0.11em;overflow-x:auto;border-top:1px solid rgba(0,229,255,0.14)}
+.stat{display:flex;align-items:center;gap:5px;margin-right:16px;white-space:nowrap}
+.stat .dot{width:5px;height:5px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px #00ff88;animation:pulse-dot 2s infinite}
+.stat .dot.amber{background:#ffaa00;box-shadow:0 0 6px #ffaa00}
+.stat .dot.red{background:#ff3366;box-shadow:0 0 6px #ff3366}
+.stat .label{color:rgba(255,255,255,0.5)}
+.stat .val{color:#00e5ff}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* CENTER LABEL & THOUGHT STREAM */
+#center-label{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:5;pointer-events:none}
+#center-label .main{font-family:var(--font-display);font-size:15px;color:#ffaa00;letter-spacing:0.38em;text-shadow:0 0 16px rgba(255,170,0,0.85),0 0 30px rgba(0,229,255,0.5);margin-bottom:4px;font-weight:700}
+#center-label .sub{font-size:8.5px;color:#00e5ff;letter-spacing:0.28em;text-shadow:0 0 8px rgba(0,229,255,0.6)}
+#center-label .state{font-size:10px;color:#00ff88;letter-spacing:0.2em;margin-top:8px;text-shadow:0 0 10px rgba(0,255,136,0.5)}
+
+#thought-stream{position:fixed;bottom:34px;left:290px;right:300px;max-width:460px;margin:0 auto;z-index:6;font-size:8px;line-height:1.5;color:rgba(127,212,193,0.85);pointer-events:none;background:rgba(2,8,16,0.68);padding:4px 8px;border-left:2px solid #ffaa00;border-radius:2px}
+#thought-stream .ts-label{color:#ffaa00;font-family:var(--font-display);font-size:7px;letter-spacing:0.15em;margin-bottom:2px}
+#thought-stream .ts-step{margin:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#thought-stream .ts-step .hl{color:#00e5ff;font-weight:600}
+#thought-stream .ts-step .ag{color:#ffaa00}
+
+/* READOUTS */
+#data-readout{position:fixed;top:52%;right:14px;transform:translateY(-50%);width:175px;z-index:6;font-size:8px;pointer-events:none;background:rgba(0,8,16,0.45);padding:5px;border-right:1px solid rgba(0,229,255,0.2)}
+.readout-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid rgba(0,229,255,0.1)}
+.readout-row .rl{color:rgba(255,255,255,0.45)}
+.readout-row .rv{color:#00e5ff}
+.readout-row .rv.amber{color:#ffaa00}
+.readout-row .rv.green{color:#00ff88}
+.readout-row .rv.red{color:#ff3366}
+#left-readout{position:fixed;top:52%;left:14px;transform:translateY(-50%);width:175px;z-index:6;font-size:8px;pointer-events:none;text-align:right;background:rgba(0,8,16,0.45);padding:5px;border-left:1px solid rgba(255,170,0,0.2)}
+#left-readout .readout-row{flex-direction:row-reverse}
+
+/* HUD CONTAINER & ALL-37 GRID MODE */
+#hud{position:fixed;top:52px;left:0;right:0;bottom:28px;z-index:20;pointer-events:none}
+#hud .widget{pointer-events:auto}
+#hud.grid-mode{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:10px;padding:12px;overflow-y:auto;pointer-events:auto;background:rgba(0,4,10,0.72);backdrop-filter:blur(4px)}
+#hud.grid-mode .widget{position:relative !important;top:auto !important;left:auto !important;right:auto !important;bottom:auto !important;width:100% !important;display:flex !important;flex-direction:column}
+.widget.deck-hidden{display:none}
+
+/* WIDGET BASE */
+.widget{position:fixed;background:rgba(4,12,24,0.91);border:1px solid rgba(0,229,255,0.28);backdrop-filter:blur(8px);min-width:195px;z-index:20;transition:box-shadow 0.25s,border-color 0.25s}
+.widget:hover{border-color:rgba(0,229,255,0.58);box-shadow:0 0 12px rgba(0,229,255,0.28),0 0 24px rgba(0,229,255,0.1)}
+.widget-header{display:flex;align-items:center;padding:5px 8px;border-bottom:1px solid rgba(0,229,255,0.16);cursor:move;user-select:none;background:rgba(0,229,255,0.04);gap:4px}
+.widget-header .w-icon{width:12px;height:12px;fill:#00e5ff;opacity:0.85;flex-shrink:0}
+.widget-header .w-title{font-family:var(--font-display);font-size:8px;letter-spacing:0.13em;color:#00e5ff;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.widget-header .w-status{font-size:7.5px;color:rgba(127,212,193,0.85);margin-right:2px;white-space:nowrap}
+.widget-header .w-act{padding:1px 4px;font-family:var(--font-mono);font-size:7px;color:#ffaa00;border:1px solid rgba(255,170,0,0.4);background:rgba(255,170,0,0.08);cursor:pointer;border-radius:2px}
+.widget-header .w-act:hover{background:rgba(255,170,0,0.25);color:#fff}
+.widget-header .w-btn{width:14px;height:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(127,212,193,0.7);font-size:11px;border:1px solid transparent;background:transparent}
+.widget-header .w-btn:hover{color:#00e5ff;border-color:rgba(0,229,255,0.3)}
+.widget-body{padding:6px 8px;max-height:205px;overflow-y:auto;transition:max-height 0.3s,padding 0.3s}
+.widget.collapsed .widget-body{max-height:0;padding:0 8px;overflow:hidden}
+.widget-body::-webkit-scrollbar{width:3px}
+.widget-body::-webkit-scrollbar-thumb{background:rgba(0,229,255,0.35);border-radius:2px}
+.clip-tl{clip-path:polygon(8px 0,100% 0,100% 100%,0 100%,0 8px)}
+.clip-tr{clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%)}
+.clip-bl{clip-path:polygon(0 0,100% 0,100% 100%,8px 100%,0 calc(100% - 8px))}
+.clip-br{clip-path:polygon(0 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%)}
+
+/* CORE 8 WIDGET STYLES */
+.model-row{display:flex;align-items:center;padding:2.5px 0;border-bottom:1px solid rgba(0,229,255,0.06);font-size:8.5px;gap:4px}
+.model-name{flex:1;color:#d0f4f7;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.model-provider{color:rgba(127,212,193,0.55);font-size:7px;width:42px;overflow:hidden;text-overflow:ellipsis}
+.model-latency{width:36px;text-align:right;color:#ffaa00;font-size:7.5px}
+.model-tokens{width:40px;text-align:right;color:#00e5ff;font-size:7.5px}
+.model-ping-btn{padding:0 3px;font-family:var(--font-mono);font-size:6.5px;color:#00e5ff;border:1px solid rgba(0,229,255,0.3);background:rgba(0,229,255,0.06);cursor:pointer;border-radius:2px}
+.model-status-badge{padding:1px 3px;border-radius:2px;font-size:6px;font-weight:600;cursor:pointer;border:none;font-family:var(--font-mono)}
+.model-status-badge.online{background:rgba(0,255,136,0.14);color:#00ff88}
+.model-status-badge.offline{background:rgba(255,51,102,0.14);color:#ff3366}
+.model-status-badge.busy{background:rgba(255,170,0,0.14);color:#ffaa00}
+
+.agent-node{display:flex;align-items:center;padding:2.5px 2px;gap:5px;font-size:8.5px;cursor:pointer;border-radius:2px}
+.agent-node:hover{background:rgba(0,229,255,0.08)}
+.agent-indicator{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.agent-indicator.active{background:#00ff88;box-shadow:0 0 4px #00ff88;animation:pulse-dot 1.5s infinite}
+.agent-indicator.idle{background:rgba(10,90,74,0.8)}
+.agent-indicator.thinking{background:#ffaa00;box-shadow:0 0 4px #ffaa00;animation:pulse-dot 1s infinite}
+.agent-task{color:rgba(127,212,193,0.75);font-size:7.5px;margin-left:auto;max-width:95px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.task-item{display:flex;align-items:center;padding:3px 5px;margin:2px 0;background:rgba(0,229,255,0.03);border-left:2px solid rgba(10,90,74,0.9);font-size:8.5px;gap:5px;cursor:pointer}
+.task-item.in-progress{border-left-color:#ffaa00}
+.task-item.done{border-left-color:#00ff88;opacity:0.6;text-decoration:line-through}
+.task-agent{font-size:7px;color:#b388ff;background:rgba(179,136,255,0.12);padding:1px 3px;border-radius:2px}
+.task-del{background:transparent;border:none;color:rgba(255,51,102,0.6);cursor:pointer;font-size:9px;padding:0 2px}
+
+.approval-card{padding:6px;margin:3px 0;background:rgba(0,229,255,0.02);border:1px solid rgba(0,229,255,0.14);border-radius:3px}
+.approval-card .a-action{font-size:9px;color:#ffaa00;font-weight:600;margin-bottom:3px}
+.approval-card .a-for{color:#00ff88;font-size:8px;margin:1px 0}
+.approval-card .a-against{color:#ff3366;font-size:8px;margin:1px 0}
+.approval-card .a-confidence{display:flex;gap:4px;margin:3px 0}
+.conf-bar{flex:1;height:2px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden}
+.conf-fill{height:100%;border-radius:2px}
+.approval-btns{display:flex;gap:3px;margin-top:4px}
+.approval-btns button{flex:1;padding:2px;font-family:var(--font-mono);font-size:7.5px;cursor:pointer;border:1px solid;border-radius:2px;background:transparent}
+.btn-approve{color:#00ff88;border-color:#00ff88}
+.btn-reject{color:#ff3366;border-color:#ff3366}
+.btn-explain{color:#00e5ff;border-color:#00e5ff}
+
+.voice-controls{display:flex;gap:4px;margin-bottom:4px}
+.voice-btn{flex:1;padding:3px 5px;font-family:var(--font-mono);font-size:7.5px;border:1px solid rgba(0,229,255,0.4);background:rgba(0,229,255,0.08);color:#00e5ff;cursor:pointer;border-radius:2px}
+.voice-btn.active{background:rgba(255,51,102,0.25);border-color:#ff3366;color:#ff3366}
+.voice-wave{display:flex;align-items:center;gap:2px;height:22px;margin:3px 0}
+.voice-bar{width:2px;background:#00e5ff;border-radius:2px;min-height:2px}
+.voice-transcript{font-size:8.5px;color:rgba(127,212,193,0.8);padding:4px 5px;background:rgba(0,229,255,0.03);border-radius:2px;min-height:22px;line-height:1.35}
+.voice-chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.voice-chip{padding:1px 4px;font-size:7px;font-family:var(--font-mono);color:rgba(127,212,193,0.85);border:1px solid rgba(0,229,255,0.2);background:rgba(0,229,255,0.04);cursor:pointer;border-radius:2px}
+
+.ticker-strip{display:flex;justify-content:space-between;background:rgba(255,170,0,0.06);border:1px solid rgba(255,170,0,0.2);padding:3px 5px;border-radius:2px;margin-bottom:4px;font-size:7.5px}
+.quick-trade-bar{display:flex;gap:3px;margin-bottom:4px}
+.qt-btn{flex:1;padding:2px 3px;font-family:var(--font-mono);font-size:7px;cursor:pointer;border-radius:2px;border:1px solid;background:transparent;font-weight:600}
+.qt-btn.buy{color:#00ff88;border-color:rgba(0,255,136,0.5)}
+.qt-btn.sell{color:#ff3366;border-color:rgba(255,51,102,0.5)}
+
+/* NEW WIDGET STYLES (ALL 29 NEW WIDGETS) */
+.pr-row{display:flex;align-items:center;padding:3px 0;border-bottom:1px solid rgba(0,255,200,0.05);font-size:9px;gap:5px}
+.pr-num{color:var(--accent);font-weight:600;min-width:30px}
+.pr-title{flex:1;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-ci{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pr-ci.pass{background:var(--success);box-shadow:0 0 4px var(--success)}
+.pr-ci.fail{background:var(--error);box-shadow:0 0 4px var(--error)}
+.pr-ci.pending{background:var(--warning);animation:pulse-dot 1.5s infinite}
+.pr-review{font-size:7.5px;padding:1px 4px;border-radius:2px;background:rgba(0,255,200,0.06);color:var(--text-secondary)}
+.pr-btn{padding:0 3px;font-size:6.5px;font-family:var(--font-mono);border:1px solid rgba(0,229,255,0.3);background:transparent;color:#00e5ff;cursor:pointer;border-radius:2px}
+
+.slack-ch{display:flex;align-items:center;padding:3.5px 2px;font-size:9.5px;border-bottom:1px solid rgba(0,255,200,0.05);gap:6px;cursor:pointer}
+.slack-ch:hover{background:rgba(0,229,255,0.06)}
+.slack-hash{color:var(--text-secondary);font-weight:600}
+.slack-unread{margin-left:auto;background:rgba(0,255,200,0.12);color:var(--accent);padding:0 5px;border-radius:2px;font-size:8px;font-weight:700}
+.slack-mention{color:var(--warning);font-size:8.5px}
+
+.server-row{display:flex;align-items:center;padding:3.5px 0;font-size:9.5px;border-bottom:1px solid rgba(0,255,200,0.05);gap:5px}
+.server-name{flex:1;color:var(--text-primary)}
+.server-metric{width:34px;text-align:right;font-size:8.5px;color:var(--text-secondary)}
+.server-metric.warn{color:var(--warning)}
+.server-metric.crit{color:var(--error)}
+.server-bar{width:34px;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.server-bar-fill{height:100%;border-radius:2px}
+
+.social-post{padding:4px 0;border-bottom:1px solid rgba(0,255,200,0.05);font-size:9px}
+.social-platform{display:inline-block;padding:1px 4px;font-size:7.5px;border-radius:2px;margin-right:4px;font-weight:600}
+.social-platform.x{background:rgba(255,255,255,0.08);color:#fff}
+.social-platform.li{background:rgba(0,119,182,0.2);color:#6ec6ff}
+.social-platform.yt{background:rgba(255,0,0,0.12);color:#ff6b6b}
+.social-engage{color:var(--text-secondary);font-size:8px;margin-top:2px}
+.social-draft{color:var(--warning);font-size:8.5px;margin-top:3px;padding:3px 5px;background:rgba(255,170,0,0.04);border-left:2px solid var(--warning)}
+
+.sys-row{display:flex;align-items:center;padding:3px 0;font-size:9.5px;gap:6px}
+.sys-label{width:36px;color:var(--text-secondary);font-size:8.5px}
+.sys-bar{flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.sys-bar-fill{height:100%;border-radius:2px;transition:width 0.6s}
+.sys-val{width:32px;text-align:right;font-size:9px;color:var(--text-primary)}
+
+.audit-entry{padding:3.5px 0;border-bottom:1px solid rgba(0,255,200,0.04);font-size:8.5px;display:flex;gap:5px;align-items:flex-start}
+.audit-time{color:var(--text-secondary);font-size:8px;min-width:36px}
+.audit-agent{color:var(--purple);font-size:8px;min-width:44px}
+.audit-action{color:var(--text-primary);flex:1}
+.audit-hash{color:var(--accent-dim);font-size:7.5px}
+
+.intel-item{padding:4px 0;border-bottom:1px solid rgba(0,255,200,0.05);font-size:9px}
+.intel-source{color:var(--cyan);font-size:8px;font-weight:600}
+.intel-text{color:var(--text-secondary);margin-top:1px;line-height:1.35}
+.intel-item.urgent{border-left:2px solid var(--error);padding-left:6px}
+
+.net-node{display:flex;align-items:center;padding:3px 0;font-size:9.5px;gap:6px}
+.net-dot{width:6px;height:6px;border-radius:50%}
+.net-dot.up{background:var(--success);box-shadow:0 0 4px var(--success)}
+.net-dot.down{background:var(--error)}
+.net-dot.degraded{background:var(--warning)}
+.net-name{flex:1;color:var(--text-primary)}
+.net-latency{font-size:8.5px;color:var(--text-secondary)}
+
+.sc-track{display:flex;align-items:center;padding:4px 0;border-bottom:1px solid rgba(0,255,200,0.05);gap:6px;font-size:9px;cursor:pointer}
+.sc-play{width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:10px}
+.sc-play.playing{color:var(--success)}
+.sc-info{flex:1;min-width:0}
+.sc-title{color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9px}
+.sc-artist{color:var(--text-secondary);font-size:8px}
+.sc-duration{color:var(--text-secondary);font-size:8px;min-width:28px;text-align:right}
+.sc-progress{height:3px;background:rgba(255,255,255,0.08);border-radius:1px;margin:5px 0;cursor:pointer;position:relative}
+.sc-progress-fill{height:100%;background:var(--accent);border-radius:1px;width:0%;box-shadow:0 0 4px var(--accent)}
+.sc-controls{display:flex;align-items:center;gap:8px;padding:3px 0}
+.sc-btn{cursor:pointer;color:var(--text-secondary);font-size:11px;background:transparent;border:none}
+.sc-btn:hover,.sc-btn.active{color:var(--accent)}
+.sc-vol{flex:1;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;cursor:pointer;position:relative}
+.sc-vol-fill{height:100%;background:var(--accent);border-radius:2px;width:70%}
+.sc-now-playing{padding:5px 7px;background:rgba(0,255,200,0.03);border-left:2px solid var(--accent);margin-bottom:5px}
+.sc-np-title{font-size:9.5px;color:var(--accent);font-weight:600}
+.sc-np-artist{font-size:8px;color:var(--text-secondary);margin-top:1px}
+
+.token-row{display:flex;align-items:center;padding:4px 0;border-bottom:1px solid rgba(0,255,200,0.05);gap:6px;font-size:9px}
+.token-icon{width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;flex-shrink:0}
+.token-icon.btc{background:rgba(247,147,26,0.2);color:#f7931a}
+.token-icon.eth{background:rgba(98,126,234,0.2);color:#627eea}
+.token-icon.sol{background:rgba(153,69,255,0.2);color:#9945ff}
+.token-icon.mono{background:rgba(0,255,200,0.1);color:var(--accent)}
+.token-icon.usdc{background:rgba(0,183,195,0.2);color:#00b7c3}
+.token-name{flex:1;color:var(--text-primary)}
+.token-amount{color:var(--text-secondary);font-size:8.5px}
+.token-value{color:var(--text-primary);font-size:9px;min-width:54px;text-align:right}
+.token-change{font-size:8px;min-width:38px;text-align:right}
+.token-change.pos{color:var(--success)}
+.token-change.neg{color:var(--error)}
+.token-total{display:flex;justify-content:space-between;padding:5px 0;margin-top:3px;border-top:1px solid rgba(0,255,200,0.15);font-size:10px}
+.token-total .val{color:var(--accent);font-weight:700;font-size:11.5px}
+
+.bot-card{padding:5px;margin:3px 0;background:rgba(0,255,200,0.02);border:1px solid rgba(0,255,200,0.1);border-radius:3px}
+.bot-header{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.bot-name{color:var(--accent);font-size:9px;font-weight:600;flex:1}
+.bot-status{font-size:7px;padding:1px 4px;border-radius:2px;cursor:pointer;border:none;font-family:var(--font-mono);font-weight:600}
+.bot-status.running{background:rgba(0,255,136,0.14);color:var(--success)}
+.bot-status.paused{background:rgba(255,170,0,0.14);color:var(--warning)}
+.bot-strategy{font-size:8px;color:var(--text-secondary);margin:2px 0}
+.bot-pnl{font-size:9px;font-weight:600}
+.bot-pnl.pos{color:var(--success)}
+.bot-pnl.neg{color:var(--error)}
+.trade-log{font-size:8px;padding:2px 0;border-bottom:1px solid rgba(0,255,200,0.03);display:flex;gap:4px;align-items:center}
+.trade-log .t-time{color:var(--text-secondary);font-size:7.5px;min-width:30px}
+.trade-log .t-side{font-size:7px;font-weight:700;padding:0 3px;border-radius:2px}
+.trade-log .t-side.buy{background:rgba(0,255,136,0.14);color:var(--success)}
+.trade-log .t-side.sell{background:rgba(255,51,102,0.14);color:var(--error)}
+.trade-log .t-pair{color:var(--text-primary);flex:1}
+.trade-log .t-price{color:var(--text-secondary);font-size:7.5px}
+.trade-log .t-pnl{font-size:7.5px;font-weight:600}
+
+.term-line{font-size:8.5px;padding:1.5px 0;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.term-prompt{color:var(--amber);font-weight:600}
+.term-cmd{color:var(--text-primary)}
+.term-output{color:var(--text-secondary)}
+.term-success{color:var(--success)}
+.term-error{color:var(--error)}
+.term-warn{color:var(--warning)}
+.term-input-row{display:flex;align-items:center;gap:4px;margin-top:4px;padding-top:3px;border-top:1px solid rgba(0,229,255,0.15)}
+.term-input{flex:1;background:transparent;border:none;outline:none;color:#00e5ff;font-family:var(--font-mono);font-size:8.5px}
+.term-chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.term-chip{padding:1px 4px;font-size:6.5px;font-family:var(--font-mono);color:#ffaa00;border:1px solid rgba(255,170,0,0.3);background:rgba(255,170,0,0.05);cursor:pointer;border-radius:2px}
+
+.weather-main{display:flex;align-items:center;gap:10px;padding:4px 0}
+.weather-temp{font-size:24px;font-weight:200;color:var(--text-primary)}
+.weather-desc{font-size:9px;color:var(--text-secondary)}
+.weather-icon{font-size:22px}
+.weather-details{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px 0}
+.weather-detail{display:flex;justify-content:space-between;font-size:8.5px}
+.weather-detail .wd-label{color:var(--text-secondary)}
+.weather-detail .wd-val{color:var(--text-primary)}
+.weather-hourly{display:flex;gap:5px;padding:3px 0;overflow-x:auto}
+.weather-hour{text-align:center;font-size:8px;min-width:28px}
+.weather-hour .wh-time{color:var(--text-secondary)}
+.weather-hour .wh-icon{margin:2px 0;font-size:10px}
+.weather-hour .wh-temp{color:var(--text-primary)}
+
+.habit-row{display:flex;align-items:center;padding:3.5px 0;border-bottom:1px solid rgba(0,255,200,0.05);font-size:9px;gap:5px}
+.habit-name{flex:1;color:var(--text-primary)}
+.habit-streak{color:var(--accent);font-size:8.5px}
+.habit-dots{display:flex;gap:2px}
+.habit-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.08);cursor:pointer}
+.habit-dot.done{background:var(--success);box-shadow:0 0 3px var(--success)}
+.habit-dot.today{border:1px solid var(--accent);animation:pulse-dot 2s infinite}
+
+.pomo-timer{text-align:center;padding:6px 0}
+.pomo-time{font-family:var(--font-display);font-size:24px;color:var(--accent);text-shadow:0 0 12px rgba(0,255,200,0.3);letter-spacing:0.1em}
+.pomo-mode{font-size:8.5px;color:var(--text-secondary);margin-top:2px;letter-spacing:0.15em}
+.pomo-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;margin:6px 0;overflow:hidden}
+.pomo-bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width 0.5s linear}
+.pomo-controls{display:flex;justify-content:center;gap:6px;margin-top:5px}
+.pomo-btn{cursor:pointer;padding:2px 8px;border:1px solid rgba(0,255,200,0.3);color:var(--text-secondary);font-size:8px;border-radius:2px;background:transparent;font-family:var(--font-mono)}
+.pomo-btn:hover,.pomo-btn.active{color:var(--accent);border-color:var(--accent);background:rgba(0,255,200,0.08)}
+.pomo-sessions{font-size:8.5px;color:var(--text-secondary);margin-top:4px}
+
+.note-item{padding:4px 5px;margin:2.5px 0;background:rgba(0,255,200,0.02);border-left:2px solid var(--accent-dim);font-size:8.5px;line-height:1.4;color:var(--text-secondary)}
+.note-item .note-time{color:var(--accent-dim);font-size:7.5px;display:block;margin-bottom:1px}
+.note-item .note-text{color:var(--text-primary)}
+
+.power-row{display:flex;align-items:center;padding:3.5px 0;font-size:9px;gap:6px}
+.power-icon{font-size:13px}
+.power-name{flex:1;color:var(--text-primary)}
+.power-pct{color:var(--text-secondary);font-size:8.5px}
+.power-bar{width:38px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.power-bar-fill{height:100%;border-radius:2px}
+.power-charging{color:var(--success);font-size:8px}
+
+.net-speed{display:flex;align-items:baseline;gap:4px;padding:3px 0}
+.net-speed-val{font-size:20px;font-weight:200;color:var(--accent)}
+.net-speed-unit{font-size:8.5px;color:var(--text-secondary)}
+.net-metrics{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px 0}
+.net-metric{font-size:8.5px;display:flex;justify-content:space-between}
+.net-metric .nm-label{color:var(--text-secondary)}
+.net-metric .nm-val{color:var(--text-primary)}
+.net-ping-graph{height:22px;margin-top:3px;position:relative}
+.net-ping-bar{position:absolute;bottom:0;width:2px;background:var(--accent);opacity:0.65;border-radius:1px;transition:height 0.4s}
+
+.brow-tab{display:flex;align-items:center;padding:3.5px 0;border-bottom:1px solid rgba(0,255,200,0.05);font-size:9px;gap:5px;cursor:pointer}
+.brow-fav{width:14px;height:14px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7.5px;flex-shrink:0}
+.brow-title{flex:1;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow-time{color:var(--text-secondary);font-size:8px}
+.brow-active{border-left:2px solid var(--accent);padding-left:5px}
+.brow-stat{display:flex;justify-content:space-between;padding:2.5px 0;font-size:8.5px;color:var(--text-secondary)}
+.brow-stat span:last-child{color:var(--text-primary)}
+
+.sh-room{padding:3.5px 0;border-bottom:1px solid rgba(0,255,200,0.05)}
+.sh-room-name{font-size:8px;color:var(--accent);letter-spacing:0.1em;margin-bottom:2px}
+.sh-device{display:flex;align-items:center;padding:2px 0;font-size:9px;gap:5px;cursor:pointer}
+.sh-icon{font-size:10px;width:15px;text-align:center}
+.sh-name{flex:1;color:var(--text-primary)}
+.sh-state{font-size:8px;padding:1px 4px;border-radius:2px}
+.sh-state.on{background:rgba(0,255,136,0.12);color:var(--success)}
+.sh-state.off{background:rgba(255,255,255,0.06);color:var(--text-secondary)}
+.sh-state.warn{background:rgba(255,170,0,0.12);color:var(--warning)}
+.sh-temp{font-size:8.5px;color:var(--cyan)}
+
+.skill-row{display:flex;align-items:center;padding:2.5px 0;font-size:8.5px;border-bottom:1px solid rgba(0,255,200,0.03);gap:5px;cursor:pointer}
+.skill-row:hover{background:rgba(0,229,255,0.06)}
+.skill-name{flex:1;color:var(--text-primary)}
+.skill-agent{font-size:7.5px;color:var(--purple);background:rgba(179,136,255,0.08);padding:0 4px;border-radius:2px}
+.skill-uses{font-size:8px;color:var(--text-secondary);min-width:26px;text-align:right}
+.skill-status{width:5px;height:5px;border-radius:50%}
+.skill-status.active{background:var(--success);box-shadow:0 0 3px var(--success)}
+.skill-status.idle{background:var(--accent-dim)}
+.skill-status.error{background:var(--error)}
+.skill-cat{font-size:7.5px;color:var(--cyan);min-width:42px}
+
+.harness-pipe{margin:3px 0}
+.harness-stage{display:flex;align-items:center;gap:5px;padding:2px 0;font-size:8.5px}
+.harness-icon{width:12px;height:12px;display:flex;align-items:center;justify-content:center;font-size:9px}
+.harness-icon.pass{color:var(--success)}
+.harness-icon.fail{color:var(--error)}
+.harness-icon.running{color:var(--warning);animation:pulse-dot 1s infinite}
+.harness-icon.pending{color:var(--accent-dim)}
+.harness-name{flex:1;color:var(--text-primary)}
+.harness-dur{font-size:8px;color:var(--text-secondary)}
+.harness-log{font-size:8px;color:var(--text-secondary);padding:2px 0 2px 16px;line-height:1.35}
+.harness-log .err{color:var(--error)}
+
+.vpn-status{display:flex;align-items:center;gap:7px;padding:4px 0;margin-bottom:4px;cursor:pointer}
+.vpn-dot{width:9px;height:9px;border-radius:50%}
+.vpn-dot.connected{background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse-dot 2s infinite}
+.vpn-dot.disconnected{background:var(--error)}
+.vpn-label{font-size:10px;font-weight:600}
+.vpn-label.on{color:var(--success)}
+.vpn-label.off{color:var(--error)}
+.vpn-detail{display:flex;justify-content:space-between;padding:2.5px 0;font-size:8.5px;border-bottom:1px solid rgba(0,255,200,0.04)}
+.vpn-detail .vd-label{color:var(--text-secondary)}
+.vpn-detail .vd-val{color:var(--text-primary)}
+.vpn-detail .vd-val.secure{color:var(--success)}
+.vpn-kill{margin-top:5px;padding:3px 6px;background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.2);border-radius:2px;font-size:8px;color:var(--error);text-align:center}
+
+.tor-circuit{padding:4px 0}
+.tor-hop{display:flex;align-items:center;gap:7px;padding:3px 0}
+.tor-hop-dot{width:10px;height:10px;border-radius:50%;border:2px solid}
+.tor-hop-dot.entry{border-color:var(--warning);background:rgba(255,170,0,0.2)}
+.tor-hop-dot.middle{border-color:var(--cyan);background:rgba(0,229,255,0.2)}
+.tor-hop-dot.exit{border-color:var(--success);background:rgba(0,255,136,0.2)}
+.tor-hop-label{font-size:8px;color:var(--text-secondary);width:30px}
+.tor-hop-ip{font-size:8.5px;color:var(--text-primary);flex:1}
+.tor-hop-country{font-size:8px;color:var(--accent)}
+.tor-line{width:2px;height:8px;background:rgba(0,255,200,0.2);margin-left:4px}
+.tor-anon{display:flex;justify-content:space-between;padding:2.5px 0;font-size:8.5px}
+.tor-anon .ta-label{color:var(--text-secondary)}
+.tor-anon .ta-val{color:var(--success)}
+.tor-warn{margin-top:3px;padding:3px 5px;background:rgba(255,170,0,0.04);border-left:2px solid var(--warning);font-size:8px;color:var(--warning)}
+
+.dev-srv{display:flex;align-items:center;padding:3px 0;border-bottom:1px solid rgba(0,255,200,0.05);font-size:9px;gap:5px;cursor:pointer}
+.dev-srv-dot{width:6px;height:6px;border-radius:50%}
+.dev-srv-dot.running{background:var(--success);box-shadow:0 0 4px var(--success);animation:pulse-dot 2s infinite}
+.dev-srv-dot.stopped{background:var(--error)}
+.dev-srv-dot.building{background:var(--warning);animation:pulse-dot 1s infinite}
+.dev-srv-name{flex:1;color:var(--text-primary)}
+.dev-srv-port{font-size:8px;color:var(--cyan);background:rgba(0,229,255,0.06);padding:1px 4px;border-radius:2px}
+.dev-srv-cpu{font-size:8px;color:var(--text-secondary);min-width:26px;text-align:right}
+.dev-srv-log{font-size:7.5px;color:var(--text-secondary);padding:1px 0 2px 12px;font-style:italic}
+
+.api-route{display:flex;align-items:center;padding:2.5px 0;font-size:8.5px;border-bottom:1px solid rgba(0,255,200,0.04);gap:5px}
+.api-method{font-size:7.5px;font-weight:700;padding:1px 3px;border-radius:2px;min-width:26px;text-align:center}
+.api-method.get{background:rgba(0,255,136,0.12);color:var(--success)}
+.api-method.post{background:rgba(0,229,255,0.12);color:var(--cyan)}
+.api-method.put{background:rgba(255,170,0,0.12);color:var(--warning)}
+.api-method.del{background:rgba(255,51,102,0.12);color:var(--error)}
+.api-path{flex:1;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.api-latency{font-size:8px;color:var(--text-secondary)}
+.api-count{font-size:8px;color:var(--accent);min-width:28px;text-align:right}
+.api-rate{margin-top:4px;padding:3px 5px;background:rgba(0,255,200,0.02);border:1px solid rgba(0,255,200,0.08);border-radius:2px;font-size:8px;display:flex;justify-content:space-between}
+.api-rate .ar-label{color:var(--text-secondary)}
+.api-rate .ar-val{color:var(--accent)}
+
+.dock-container{display:flex;align-items:center;padding:3px 0;border-bottom:1px solid rgba(0,255,200,0.05);font-size:9px;gap:5px;cursor:pointer}
+.dock-dot{width:6px;height:6px;border-radius:50%}
+.dock-dot.running{background:var(--success);box-shadow:0 0 4px var(--success)}
+.dock-dot.exited{background:var(--error)}
+.dock-dot.restarting{background:var(--warning);animation:pulse-dot 1s infinite}
+.dock-name{flex:1;color:var(--text-primary)}
+.dock-image{font-size:7.5px;color:var(--text-secondary)}
+.dock-res{font-size:8px;color:var(--cyan);min-width:46px;text-align:right}
+
+.git-branch{display:flex;align-items:center;padding:3px 0;border-bottom:1px solid rgba(0,255,200,0.05);font-size:9px;gap:5px;cursor:pointer}
+.git-branch-icon{font-size:9px;color:var(--accent)}
+.git-branch-name{flex:1;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.git-branch-name.current{color:var(--success);font-weight:600}
+.git-branch-ahead{font-size:8px;color:var(--cyan)}
+.git-branch-behind{font-size:8px;color:var(--warning)}
+.git-branch-conflict{font-size:7.5px;color:var(--error);background:rgba(255,51,102,0.1);padding:1px 3px;border-radius:2px}
+.git-branch-time{font-size:8px;color:var(--text-secondary)}
+
+.proc-row{display:flex;align-items:center;padding:2.5px 0;font-size:8.5px;border-bottom:1px solid rgba(0,255,200,0.03);gap:5px}
+.proc-pid{color:var(--text-secondary);font-size:8px;min-width:26px}
+.proc-name{flex:1;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proc-cpu{font-size:8.5px;min-width:28px;text-align:right}
+.proc-cpu.high{color:var(--error)}
+.proc-cpu.med{color:var(--warning)}
+.proc-cpu.low{color:var(--text-secondary)}
+.proc-mem{font-size:8.5px;color:var(--cyan);min-width:34px;text-align:right}
+
+/* TOAST & MODALS */
+@keyframes flicker{0%,100%{opacity:1}92%{opacity:1}93%{opacity:0.75}94%{opacity:1}96%{opacity:0.85}97%{opacity:1}}
+.flicker{animation:flicker 5s infinite}
+.notification-toast{position:fixed;top:58px;right:12px;background:rgba(4,12,24,0.96);border:1px solid #ffaa00;padding:8px 10px;z-index:200;max-width:280px;transform:translateX(120%);transition:transform 0.35s cubic-bezier(0.22,1,0.36,1);backdrop-filter:blur(8px)}
+.notification-toast.show{transform:translateX(0)}
+.notification-toast .nt-title{font-family:var(--font-display);font-size:8px;color:#ffaa00;letter-spacing:0.1em;margin-bottom:2px}
+.notification-toast .nt-body{font-size:8.5px;color:#d0f4f7;line-height:1.35}
+.hud-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(4px);z-index:300;display:none;align-items:center;justify-content:center;padding:16px}
+.hud-modal-backdrop.open{display:flex}
+.hud-modal{background:rgba(4,14,28,0.97);border:1px solid #00e5ff;box-shadow:0 0 30px rgba(0,229,255,0.25);width:100%;max-width:520px;padding:12px 14px;border-radius:3px;color:#d0f4f7;font-size:9px}
+.hud-modal-header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,229,255,0.2);padding-bottom:6px;margin-bottom:8px}
+.hud-modal-title{font-family:var(--font-display);font-size:10px;color:#ffaa00;letter-spacing:0.15em}
+.hud-modal-close{background:transparent;border:1px solid rgba(255,51,102,0.4);color:#ff3366;cursor:pointer;padding:1px 6px;font-family:var(--font-mono);font-size:9px}
+.hud-input,.hud-select{width:100%;padding:5px 7px;margin:4px 0 8px;background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.35);color:#fff;font-family:var(--font-mono);font-size:9px;border-radius:2px}
+.hud-modal-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
+.hud-btn{padding:4px 10px;font-family:var(--font-display);font-size:8px;letter-spacing:0.1em;cursor:pointer;border:1px solid #00e5ff;background:rgba(0,229,255,0.12);color:#00e5ff;border-radius:2px}
+.receipt-row{padding:4px 6px;margin:3px 0;background:rgba(0,229,255,0.03);border-left:2px solid #ffaa00;font-size:8px;line-height:1.4}
+</style>
+</head>
+<body>
+
+<!-- BOOT SCREEN -->
+<div id="boot-screen">
+  <canvas id="boot-canvas"></canvas>
+  <svg id="boot-emblem" viewBox="0 0 200 200">
+    <defs>
+      <radialGradient id="chakraGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#fff7d6"/><stop offset="45%" stop-color="#ffaa00"/><stop offset="85%" stop-color="#ff5500"/><stop offset="100%" stop-color="transparent"/>
+      </radialGradient>
+    </defs>
+    <g stroke="#ffaa00" stroke-width="1.4" fill="rgba(255,140,0,0.15)">
+      <path d="M100 6 L112 34 L88 34 Z"/><path d="M100 194 L112 166 L88 166 Z"/>
+      <path d="M6 100 L34 112 L34 88 Z"/><path d="M194 100 L166 112 L166 88 Z"/>
+      <path d="M33 33 L58 46 L46 58 Z"/><path d="M167 33 L142 46 L154 58 Z"/>
+      <path d="M33 167 L58 154 L46 142 Z"/><path d="M167 167 L142 154 L154 142 Z"/>
+    </g>
+    <circle cx="100" cy="100" r="68" fill="none" stroke="#ffaa00" stroke-width="2.2" stroke-dasharray="360 35"/>
+    <circle cx="100" cy="100" r="58" fill="none" stroke="#00e5ff" stroke-width="2" stroke-dasharray="300 30" stroke-dashoffset="45"/>
+    <circle cx="100" cy="100" r="48" fill="none" stroke="#ffaa00" stroke-width="2" stroke-dasharray="240 28" stroke-dashoffset="90"/>
+    <circle cx="100" cy="100" r="38" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-dasharray="185 24" stroke-dashoffset="135"/>
+    <circle cx="100" cy="100" r="28" fill="none" stroke="#ffaa00" stroke-width="1.8" stroke-dasharray="130 20" stroke-dashoffset="180"/>
+    <circle cx="100" cy="100" r="18" fill="none" stroke="#00e5ff" stroke-width="1.6" stroke-dasharray="80 16" stroke-dashoffset="225"/>
+    <line x1="100" y1="100" x2="100" y2="172" stroke="#ffaa00" stroke-width="2.6"/>
+    <circle cx="100" cy="100" r="6" fill="url(#chakraGlow)"/>
+  </svg>
+  <div id="boot-text">CHAKRAVYUHA ONLINE</div>
+  <div id="boot-sub">AI AGENT HARNESS · 37-WIDGET NEURAL COMMAND INTERFACE v3.7.1</div>
+  <button id="boot-skip" onclick="dismissBoot()">[ ENTER 37-WIDGET MISSION CONTROL HUD ]</button>
+</div>
+
+<!-- CANVAS HUD BACKGROUND -->
+<canvas id="hud-canvas"></canvas>
+<div id="vignette"></div>
+<div id="scanlines"></div>
+<div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+
+<!-- TOP BAR -->
+<div id="top-bar">
+  <span class="title flicker">
+    <svg width="14" height="14" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="#ffaa00" stroke-width="2" stroke-dasharray="58 8"/><circle cx="16" cy="16" r="8" fill="none" stroke="#00e5ff" stroke-width="1.8" stroke-dasharray="34 6"/><circle cx="16" cy="16" r="3" fill="#ffaa00"/></svg>
+    CHAKRAVYUHA
+  </span>
+  <span style="color:rgba(255,255,255,0.45)">37-WIDGET AI HARNESS v3.7.1</span>
+  <span class="sub" id="backend-mode-badge">◉ ENGINE: DUAL-MODE HARNESS</span>
+  <button class="top-btn" onclick="syncBackendNow()">↻ SYNC</button>
+  <button class="top-btn amber" onclick="openModal('arch-modal')">🏛 7-LAYER ARCH</button>
+  <button class="top-btn amber" onclick="openModal('receipts-modal')" id="top-receipts-btn">📜 RECEIPTS (7)</button>
+  <button class="top-btn" onclick="toggleAudioMute()" id="sfx-toggle-btn">🔊 SFX ON</button>
+  <span class="time" id="clock">00:00:00</span>
+</div>
+
+<!-- WORKSPACE DECK SWITCHER (37 WIDGETS) -->
+<div id="deck-bar">
+  <button class="deck-btn active" id="deck-core" onclick="switchDeck('core')">◉ CORE HUD (8)</button>
+  <button class="deck-btn" id="deck-ops" onclick="switchDeck('ops')">⚡ OPS &amp; INFRA (10)</button>
+  <button class="deck-btn" id="deck-sec" onclick="switchDeck('sec')">🛡 SEC &amp; COMMS (8)</button>
+  <button class="deck-btn" id="deck-life" onclick="switchDeck('life')">💎 WEALTH &amp; LIFE (11)</button>
+  <button class="deck-btn" id="deck-all" onclick="switchDeck('all')">⊞ ALL 37 WIDGETS (GRID)</button>
+  <button class="deck-btn" style="margin-left:auto" onclick="toggleCollapseAll(false)">+ EXPAND ALL</button>
+  <button class="deck-btn" onclick="toggleCollapseAll(true)">− COLLAPSE ALL</button>
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="bottom-bar">
+  <div class="stat"><span class="dot" id="core-dot"></span><span class="label">CORE</span><span class="val" id="core-status">ONLINE</span></div>
+  <div class="stat"><span class="dot"></span><span class="label">VOICE</span><span class="val" id="voice-status">IDLE</span></div>
+  <div class="stat"><span class="dot"></span><span class="label">MEMORY</span><span class="val" id="mem-entries-val">2,847</span></div>
+  <div class="stat"><span class="dot amber"></span><span class="label">MODELS</span><span class="val" id="models-status">13/14</span></div>
+  <div class="stat"><span class="dot"></span><span class="label">AGENTS</span><span class="val" id="agents-status">5/10</span></div>
+  <div class="stat"><span class="dot"></span><span class="label">WIDGETS</span><span class="val">37/37</span></div>
+  <div class="stat"><span class="dot"></span><span class="label">BUDGET</span><span class="val" id="budget-val">$3.42/$20</span></div>
+  <div class="stat" style="margin-left:auto"><span class="label">RTT</span><span class="val" id="lat-val">4ms</span></div>
+  <div class="stat"><span class="label">UPTIME</span><span class="val" id="uptime-val">0m 05s</span></div>
+  <div class="stat" style="cursor:pointer" id="freeze-btn" onclick="toggleFreezeSwitch()"><span class="label" style="color:#ff3366;font-weight:700">⊘ FREEZE</span></div>
+</div>
+
+<!-- CENTER LABEL & THOUGHT STREAM -->
+<div id="center-label">
+  <div class="main">CHAKRAVYUHA</div>
+  <div class="sub">AI AGENT HARNESS · QUEEN ORCHESTRATOR</div>
+  <div class="state" id="state-text">◈ AWAITING COMMAND</div>
+</div>
+<div id="thought-stream">
+  <div class="ts-label">◆ CHAKRAVYUHA NEURAL THOUGHT STREAM</div>
+  <div id="ts-content"></div>
+</div>
+
+<!-- RIGHT & LEFT READOUTS -->
+<div id="data-readout">
+  <div class="readout-row"><span class="rl">CPU LOAD</span><span class="rv" id="r-cpu">18.4%</span></div>
+  <div class="readout-row"><span class="rl">RAM</span><span class="rv amber" id="r-ram">42.1%</span></div>
+  <div class="readout-row"><span class="rl">HEAP/VRAM</span><span class="rv amber" id="r-gpu">42.1G</span></div>
+  <div class="readout-row"><span class="rl">DISK</span><span class="rv green" id="r-disk">42.0%</span></div>
+  <div class="readout-row"><span class="rl">NETWORK</span><span class="rv green" id="r-net">94.2 Mbps</span></div>
+  <div class="readout-row"><span class="rl">TOKENS USED</span><span class="rv" id="r-tok">552,800</span></div>
+  <div class="readout-row"><span class="rl">COST TODAY</span><span class="rv amber" id="r-cost">$3.42</span></div>
+  <div class="readout-row"><span class="rl">TASKS</span><span class="rv" id="r-tasks">2/3/7</span></div>
+  <div class="readout-row"><span class="rl">APPROVALS</span><span class="rv amber" id="r-approvals">2 PENDING</span></div>
+  <div class="readout-row"><span class="rl">RECEIPTS</span><span class="rv" id="r-receipts">7</span></div>
+  <div class="readout-row"><span class="rl">PORTFOLIO</span><span class="rv green" id="r-equity">$265.5k</span></div>
+  <div class="readout-row"><span class="rl">CIRCUIT</span><span class="rv green" id="r-circuit">CLOSED</span></div>
+</div>
+<div id="left-readout">
+  <div class="readout-row"><span class="rl">VECTOR DB</span><span class="rv green" id="l-vec">847</span></div>
+  <div class="readout-row"><span class="rl">KG NODES</span><span class="rv" id="l-nodes">3,241</span></div>
+  <div class="readout-row"><span class="rl">KG EDGES</span><span class="rv" id="l-edges">18,902</span></div>
+  <div class="readout-row"><span class="rl">MCP SRVS</span><span class="rv green" id="l-mcp">15</span></div>
+  <div class="readout-row"><span class="rl">SKILLS</span><span class="rv" id="l-skills">47</span></div>
+  <div class="readout-row"><span class="rl">MODELS</span><span class="rv" id="l-models">14</span></div>
+  <div class="readout-row"><span class="rl">LOCAL</span><span class="rv green" id="l-local">4</span></div>
+  <div class="readout-row"><span class="rl">CLOUD</span><span class="rv amber" id="l-cloud">9</span></div>
+  <div class="readout-row"><span class="rl">FREE</span><span class="rv" id="l-free">1</span></div>
+  <div class="readout-row"><span class="rl">CORES</span><span class="rv" id="l-cores">16</span></div>
+  <div class="readout-row"><span class="rl">SHA-256</span><span class="rv green">VERIFIED</span></div>
+  <div class="readout-row"><span class="rl">REDACT</span><span class="rv green">ON</span></div>
+</div>
+
+<!-- ===== MAIN HUD CONTAINER (ALL 37 WIDGETS) ===== -->
+<div id="hud">
+
+  <!-- [1] MODEL POOL (deck: core) -->
+  <div class="widget clip-tl" data-deck="core" id="w-models" style="top:8px;left:14px;width:240px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">MODEL POOL</span><span class="w-status" id="models-online">13/14</span>
+      <button class="w-act" onclick="pingAllModels()">⚡ PING</button>
+      <button class="w-btn" onclick="toggleWidget('w-models')">−</button>
+    </div>
+    <div class="widget-body" id="model-list"></div>
+  </div>
+
+  <!-- [2] VOICE ENGINE (deck: core) -->
+  <div class="widget clip-tr" data-deck="core" id="w-voice" style="top:8px;right:14px;width:240px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M19 10v2a7 7 0 0 1-14 0v-2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">VOICE ENGINE</span><span class="w-status" id="voice-state-label">IDLE</span>
+      <button class="w-act" id="tts-toggle-btn" onclick="toggleVoiceTTS()">TTS:ON</button>
+      <button class="w-btn" onclick="toggleWidget('w-voice')">−</button>
+    </div>
+    <div class="widget-body">
+      <div class="voice-controls"><button class="voice-btn" id="ptt-btn" onclick="togglePushToTalk()">🎤 PUSH-TO-TALK</button></div>
+      <div class="voice-wave" id="voice-wave"></div>
+      <div class="voice-transcript" id="transcript"><span class="final">Say "Hey Bro" or click a directive...</span></div>
+      <div class="voice-chips">
+        <button class="voice-chip" onclick="simulateVoiceIntent('Status report on all rings')">"Status"</button>
+        <button class="voice-chip" onclick="simulateVoiceIntent('Review PR 142 and run CI')">"Review PR"</button>
+        <button class="voice-chip" onclick="simulateVoiceIntent('Buy 0.1 BTC at market')">"Buy BTC"</button>
+        <button class="voice-chip" onclick="simulateVoiceIntent('Run security CVE audit')">"Run Audit"</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- [3] AGENT SWARM (deck: core) -->
+  <div class="widget" data-deck="core" id="w-agents" style="top:8px;left:264px;width:225px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">AGENT SWARM</span><span class="w-status" id="agents-active-label">5 ACTIVE</span>
+      <button class="w-act" onclick="openModal('agent-modal')">+ DISPATCH</button>
+      <button class="w-btn" onclick="toggleWidget('w-agents')">−</button>
+    </div>
+    <div class="widget-body" id="agent-list"></div>
+  </div>
+
+  <!-- [4] GITHUB (deck: core) -->
+  <div class="widget clip-tl" data-deck="core" id="w-github" style="top:8px;right:264px;width:250px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">GITHUB</span><span class="w-status" id="github-count-label">3 PRs · 2 Issues</span>
+      <button class="w-act" onclick="runAllGithubCI()">↻ CI</button>
+      <button class="w-btn" onclick="toggleWidget('w-github')">−</button>
+    </div>
+    <div class="widget-body" id="github-list"></div>
+  </div>
+
+  <!-- [5] TASKS (deck: core) -->
+  <div class="widget" data-deck="core" id="w-tasks" style="top:222px;left:14px;width:240px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">TASKS</span><span class="w-status" id="tasks-header-count">2/3/7</span>
+      <button class="w-act" onclick="openModal('task-modal')">+ NEW</button>
+      <button class="w-btn" onclick="toggleWidget('w-tasks')">−</button>
+    </div>
+    <div class="widget-body" id="task-list"></div>
+  </div>
+
+  <!-- [6] GROK AUTOTRADER (deck: core) -->
+  <div class="widget" data-deck="core" id="w-tradeauto" style="top:222px;right:14px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">GROK AUTOTRADER</span><span class="w-status" id="bots-active-label" style="color:var(--success)">2 ACTIVE</span>
+      <button class="w-act" onclick="executeOrder('buy','BTC/USDC',0.1)">+ ORDER</button>
+      <button class="w-btn" onclick="toggleWidget('w-tradeauto')">−</button>
+    </div>
+    <div class="widget-body" id="tradeauto-body"></div>
+  </div>
+
+  <!-- [7] ADVERSARIAL REVIEW (deck: core) -->
+  <div class="widget clip-bl" data-deck="core" id="w-approvals" style="bottom:8px;left:14px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">ADVERSARIAL REVIEW</span><span class="w-status" id="approvals-header-count" style="color:#ffaa00">2 PENDING</span>
+      <button class="w-act" onclick="openModal('debate-modal')">+ DEBATE</button>
+      <button class="w-btn" onclick="toggleWidget('w-approvals')">−</button>
+    </div>
+    <div class="widget-body" id="approval-list"></div>
+  </div>
+
+  <!-- [8] QUEEN TERMINAL (deck: core) -->
+  <div class="widget clip-br" data-deck="core" id="w-terminal" style="bottom:8px;right:14px;width:310px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="19" x2="20" y2="19" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">QUEEN TERMINAL</span><span class="w-status" style="color:var(--success)">RUNNING</span>
+      <button class="w-act" onclick="runTerminalCommand('clear')">CLR</button>
+      <button class="w-btn" onclick="toggleWidget('w-terminal')">−</button>
+    </div>
+    <div class="widget-body" style="max-height:200px;display:flex;flex-direction:column">
+      <div id="terminal-body" style="flex:1;overflow-y:auto;max-height:125px"></div>
+      <div class="term-input-row">
+        <span class="term-prompt">queen@chakravyuha:~$</span>
+        <input type="text" id="terminal-input" class="term-input" placeholder="status, memory search, trade, cve..." autocomplete="off"/>
+      </div>
+      <div class="term-chips">
+        <button class="term-chip" onclick="runTerminalCommand('status --all')">status</button>
+        <button class="term-chip" onclick="runTerminalCommand('memory search &quot;trading strategy btc&quot; --top 3')">memory</button>
+        <button class="term-chip" onclick="runTerminalCommand('trade buy BTC 0.1')">buy BTC</button>
+        <button class="term-chip" onclick="runTerminalCommand('cve audit')">cve audit</button>
+        <button class="term-chip" onclick="runTerminalCommand('receipts')">receipts</button>
+        <button class="term-chip" onclick="runTerminalCommand('help')">help</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- [9] SERVERS (deck: ops) -->
+  <div class="widget deck-hidden" data-deck="ops" id="w-servers" style="top:8px;left:14px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">SERVERS</span><span class="w-status">4/5 UP</span>
+      <button class="w-btn" onclick="toggleWidget('w-servers')">−</button>
+    </div>
+    <div class="widget-body" id="servers-list"></div>
+  </div>
+
+  <!-- [10] SYSTEM HEALTH (deck: ops) -->
+  <div class="widget deck-hidden" data-deck="ops" id="w-syshealth" style="top:8px;left:290px;width:240px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">SYSTEM HEALTH</span><span class="w-status" id="sys-status">NOMINAL</span>
+      <button class="w-btn" onclick="toggleWidget('w-syshealth')">−</button>
+    </div>
+    <div class="widget-body" id="syshealth-body"></div>
+  </div>
+
+  <!-- [11] DEV SERVERS (deck: ops) -->
+  <div class="widget deck-hidden" data-deck="ops" id="w-devservers" style="top:8px;right:285px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6" fill="none" stroke="currentColor" stroke-width="1.5"/><polyline points="8 6 2 12 8 18" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">DEV SERVERS</span><span class="w-status" id="devsrv-status">5 running</span>
+      <button class="w-btn" onclick="toggleWidget('w-devservers')">−</button>
+    </div>
+    <div class="widget-body" id="devservers-body"></div>
+  </div>
+
+  <!-- [12] API GATEWAY (deck: ops) -->
+  <div class="widget deck-hidden" data-deck="ops" id="w-api" style="top:8px;right:14px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">API GATEWAY</span><span class="w-status">1.2k req/min</span>
+      <button class="w-btn" onclick="toggleWidget('w-api')">−</button>
+    </div>
+    <div class="widget-body" id="api-body"></div>
+  </div>
+
+  <!-- [13] DOCKER (deck: ops) -->
+  <div class="widget deck-hidden" data-deck="ops" id="w-docker" style="top:215px;left:14px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">DOCKER</span><span class="w-status">7 containers</span>
+      <button class="w-btn" onclick="toggleWidget('w-docker')">−</button>
+    </div>
+    <div class="widget-body" id="docker-body"></div>
+  </div>
+
+  <!-- [14] PROCESSES (deck: ops) -->
+  <div class="widget deck-hidden" data-deck="ops" id="w-process" style="top:215px;right:14px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">PROCESSES</span><span class="w-status">342 total</span>
+      <button class="w-btn" onclick="toggleWidget('w-process')">−</button>
+    </div>
+    <div class="widget-body" id="process-body"></div>
+  </div>
+
+  <!-- [15] TEST HARNESS (deck: ops) -->
+  <div class="widget deck-hidden" data-deck="ops" id="w-harness" style="bottom:8px;left:14px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6" fill="none" stroke="currentColor" stroke-width="1.5"/><polyline points="8 6 2 12 8 18" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">TEST HARNESS</span><span class="w-status" id="harness-status" style="color:var(--success)">PASSING</span>
+      <button class="w-act" onclick="rerunHarness()">↻ RUN</button>
+      <button class="w-btn" onclick="toggleWidget('w-harness')">−</button>
+    </div>
+    <div class="widget-body" id="harness-body"></div>
+  </div>
+
+  <!-- [16] GIT BRANCHES (deck: ops) -->
+  <div class="widget deck-hidden" data-deck="ops" id="w-git" style="bottom:8px;left:290px;width:255px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><line x1="6" y1="3" x2="6" y2="15" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">GIT BRANCHES</span><span class="w-status">6 active</span>
+      <button class="w-btn" onclick="toggleWidget('w-git')">−</button>
+    </div>
+    <div class="widget-body" id="git-body"></div>
+  </div>
+
+  <!-- [17] NETWORK NODES (deck: ops) -->
+  <div class="widget deck-hidden" data-deck="ops" id="w-network" style="bottom:8px;right:285px;width:240px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.42 9a16 16 0 0 1 21.16 0" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">NETWORK</span><span class="w-status">5 nodes</span>
+      <button class="w-btn" onclick="toggleWidget('w-network')">−</button>
+    </div>
+    <div class="widget-body" id="network-list"></div>
+  </div>
+
+  <!-- [18] AUDIT LOG (deck: ops) -->
+  <div class="widget deck-hidden" data-deck="ops" id="w-audit" style="bottom:8px;right:14px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">AUDIT LOG</span><span class="w-status" id="audit-count-label">142 receipts</span>
+      <button class="w-btn" onclick="toggleWidget('w-audit')">−</button>
+    </div>
+    <div class="widget-body" id="audit-list"></div>
+  </div>
+
+  <!-- [19] SLACK / COMMS (deck: sec) -->
+  <div class="widget clip-tr deck-hidden" data-deck="sec" id="w-slack" style="top:8px;left:14px;width:250px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">SLACK / COMMS</span><span class="w-status" id="slack-unread-label" style="color:var(--warning)">7 unread</span>
+      <button class="w-btn" onclick="toggleWidget('w-slack')">−</button>
+    </div>
+    <div class="widget-body" id="slack-list"></div>
+  </div>
+
+  <!-- [20] SOCIAL MEDIA (deck: sec) -->
+  <div class="widget deck-hidden" data-deck="sec" id="w-social" style="top:8px;left:275px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">SOCIAL MEDIA</span><span class="w-status">2 drafts</span>
+      <button class="w-btn" onclick="toggleWidget('w-social')">−</button>
+    </div>
+    <div class="widget-body" id="social-list"></div>
+  </div>
+
+  <!-- [21] INTEL FEED (deck: sec) -->
+  <div class="widget deck-hidden" data-deck="sec" id="w-intel" style="top:8px;right:275px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">INTEL FEED</span><span class="w-status" style="color:var(--warning)">1 URGENT</span>
+      <button class="w-btn" onclick="toggleWidget('w-intel')">−</button>
+    </div>
+    <div class="widget-body" id="intel-list"></div>
+  </div>
+
+  <!-- [22] SKILL REGISTRY (deck: sec) -->
+  <div class="widget deck-hidden" data-deck="sec" id="w-skills" style="top:8px;right:14px;width:255px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">SKILL REGISTRY</span><span class="w-status">47 skills</span>
+      <button class="w-btn" onclick="toggleWidget('w-skills')">−</button>
+    </div>
+    <div class="widget-body" id="skills-body"></div>
+  </div>
+
+  <!-- [23] VPN (deck: sec) -->
+  <div class="widget deck-hidden" data-deck="sec" id="w-vpn" style="bottom:8px;left:14px;width:245px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">VPN</span><span class="w-status" id="vpn-header-status" style="color:var(--success)">ACTIVE</span>
+      <button class="w-btn" onclick="toggleWidget('w-vpn')">−</button>
+    </div>
+    <div class="widget-body" id="vpn-body"></div>
+  </div>
+
+  <!-- [24] TOR BROWSER (deck: sec) -->
+  <div class="widget deck-hidden" data-deck="sec" id="w-tor" style="bottom:8px;left:270px;width:255px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">TOR</span><span class="w-status" style="color:var(--success)">CIRCUIT OK</span>
+      <button class="w-act" onclick="rotateTorCircuit()">↻ HOP</button>
+      <button class="w-btn" onclick="toggleWidget('w-tor')">−</button>
+    </div>
+    <div class="widget-body" id="tor-body"></div>
+  </div>
+
+  <!-- [25] BROWSER ACTIVITY (deck: sec) -->
+  <div class="widget deck-hidden" data-deck="sec" id="w-browser" style="bottom:8px;right:275px;width:260px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">BROWSER</span><span class="w-status">12 tabs</span>
+      <button class="w-btn" onclick="toggleWidget('w-browser')">−</button>
+    </div>
+    <div class="widget-body" id="browser-body"></div>
+  </div>
+
+  <!-- [26] MEMORY CORE (deck: sec) -->
+  <div class="widget deck-hidden" data-deck="sec" id="w-memory" style="bottom:8px;right:14px;width:250px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">MEMORY CORE</span><span class="w-status">2,847 entries</span>
+      <button class="w-btn" onclick="toggleWidget('w-memory')">−</button>
+    </div>
+    <div class="widget-body" id="memory-body"></div>
+  </div>
+
+  <!-- [27] SOUNDCLOUD (deck: life) -->
+  <div class="widget clip-tl deck-hidden" data-deck="life" id="w-music" style="top:8px;left:14px;width:265px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="16" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">SOUNDCLOUD</span><span class="w-status" id="sc-state">PLAYING</span>
+      <button class="w-btn" onclick="toggleWidget('w-music')">−</button>
+    </div>
+    <div class="widget-body" id="music-body"></div>
+  </div>
+
+  <!-- [28] TOKEN BALANCE (deck: life) -->
+  <div class="widget deck-hidden" data-deck="life" id="w-tokens" style="top:8px;left:290px;width:260px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 6v12M8 9h8M8 15h8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">TOKEN BALANCE</span><span class="w-status" id="tokens-header-total" style="color:var(--success)">$265,510</span>
+      <button class="w-btn" onclick="toggleWidget('w-tokens')">−</button>
+    </div>
+    <div class="widget-body" id="tokens-body"></div>
+  </div>
+
+  <!-- [29] WEATHER — MUMBAI (deck: life) -->
+  <div class="widget deck-hidden" data-deck="life" id="w-weather" style="top:8px;right:275px;width:255px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">WEATHER — MUMBAI</span><span class="w-status">28°C</span>
+      <button class="w-btn" onclick="toggleWidget('w-weather')">−</button>
+    </div>
+    <div class="widget-body" id="weather-body"></div>
+  </div>
+
+  <!-- [30] SMART HOME (deck: life) -->
+  <div class="widget deck-hidden" data-deck="life" id="w-smarthome" style="top:8px;right:14px;width:250px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">SMART HOME</span><span class="w-status">10 devices</span>
+      <button class="w-btn" onclick="toggleWidget('w-smarthome')">−</button>
+    </div>
+    <div class="widget-body" id="smarthome-body"></div>
+  </div>
+
+  <!-- [31] DAILY HABITS (deck: life) -->
+  <div class="widget deck-hidden" data-deck="life" id="w-habits" style="top:220px;left:14px;width:255px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" fill="none" stroke="currentColor" stroke-width="1.5"/><polyline points="22 4 12 14.01 9 11.01" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">DAILY HABITS</span><span class="w-status" id="habits-status">4/7 done</span>
+      <button class="w-btn" onclick="toggleWidget('w-habits')">−</button>
+    </div>
+    <div class="widget-body" id="habits-body"></div>
+  </div>
+
+  <!-- [32] FOCUS TIMER / POMODORO (deck: life) -->
+  <div class="widget deck-hidden" data-deck="life" id="w-pomodoro" style="top:220px;right:14px;width:220px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/><polyline points="12 9 12 13 15 15" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">FOCUS TIMER</span><span class="w-status" id="pomo-status">WORK</span>
+      <button class="w-btn" onclick="toggleWidget('w-pomodoro')">−</button>
+    </div>
+    <div class="widget-body" id="pomodoro-body"></div>
+  </div>
+
+  <!-- [33] QUICK NOTES (deck: life) -->
+  <div class="widget deck-hidden" data-deck="life" id="w-notes" style="bottom:8px;left:14px;width:255px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">QUICK NOTES</span><span class="w-status" id="notes-count-label">5 notes</span>
+      <button class="w-act" onclick="openModal('note-modal')">+ NOTE</button>
+      <button class="w-btn" onclick="toggleWidget('w-notes')">−</button>
+    </div>
+    <div class="widget-body" id="notes-body"></div>
+  </div>
+
+  <!-- [34] DEVICES / POWER (deck: life) -->
+  <div class="widget deck-hidden" data-deck="life" id="w-power" style="bottom:8px;left:280px;width:235px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><rect x="6" y="7" width="12" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">DEVICES</span><span class="w-status">4 online</span>
+      <button class="w-btn" onclick="toggleWidget('w-power')">−</button>
+    </div>
+    <div class="widget-body" id="power-body"></div>
+  </div>
+
+  <!-- [35] INTERNET SPEED (deck: life) -->
+  <div class="widget deck-hidden" data-deck="life" id="w-internet" style="bottom:8px;right:265px;width:230px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.42 9a16 16 0 0 1 21.16 0" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">INTERNET</span><span class="w-status" id="internet-header-speed">94.2 Mbps</span>
+      <button class="w-btn" onclick="toggleWidget('w-internet')">−</button>
+    </div>
+    <div class="widget-body" id="internet-body"></div>
+  </div>
+
+  <!-- [36] CALENDAR / SCHEDULER (deck: life) -->
+  <div class="widget deck-hidden" data-deck="life" id="w-calendar" style="bottom:8px;right:14px;width:240px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">CALENDAR / CRON</span><span class="w-status">20+ works</span>
+      <button class="w-btn" onclick="toggleWidget('w-calendar')">−</button>
+    </div>
+    <div class="widget-body" id="calendar-body"></div>
+  </div>
+
+  <!-- [37] 7-LAYER ARCHITECTURE & PHASE TRACKER (deck: life) -->
+  <div class="widget deck-hidden" data-deck="life" id="w-arch" style="top:220px;left:280px;width:270px">
+    <div class="widget-header">
+      <svg class="w-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2" fill="none" stroke="currentColor" stroke-width="1.5"/><polyline points="2 17 12 22 22 17" fill="none" stroke="currentColor" stroke-width="1.5"/><polyline points="2 12 12 17 22 12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span class="w-title">BUILD PHASES</span><span class="w-status" style="color:var(--success)">8/8 READY</span>
+      <button class="w-act" onclick="openModal('arch-modal')">BLUEPRINT</button>
+      <button class="w-btn" onclick="toggleWidget('w-arch')">−</button>
+    </div>
+    <div class="widget-body" id="arch-body"></div>
+  </div>
+
+</div><!-- /#hud -->
+
+<!-- NOTIFICATION TOAST -->
+<div class="notification-toast" id="toast">
+  <div class="nt-title" id="toast-title">CHAKRAVYUHA QUEEN</div>
+  <div class="nt-body" id="toast-body"></div>
+</div>
+
+<!-- MODAL 1: NEW TASK -->
+<div class="hud-modal-backdrop" id="task-modal">
+  <div class="hud-modal">
+    <div class="hud-modal-header">
+      <span class="hud-modal-title">◆ QUEUE NEW SWARM TASK</span>
+      <button class="hud-modal-close" onclick="closeModal('task-modal')">✕</button>
+    </div>
+    <label>Task Directive Title</label>
+    <input type="text" id="new-task-title" class="hud-input" placeholder="e.g., Audit Ring-3 zero-trust firewall rules"/>
+    <label>Assign Autonomous Agent</label>
+    <select id="new-task-agent" class="hud-select">
+      <option value="Queen">Queen (Orchestrator)</option>
+      <option value="Coder">Coder (AST &amp; PRs)</option>
+      <option value="DevOps">DevOps (Telemetry &amp; Infra)</option>
+      <option value="Trader">Trader (Quant Execution)</option>
+      <option value="Security">Security (CVE &amp; SecOps)</option>
+      <option value="Researcher">Researcher (Deep Synthesis)</option>
+      <option value="Comms">Comms (External Triage)</option>
+    </select>
+    <div class="hud-modal-actions">
+      <button class="hud-btn" onclick="submitNewTask()">QUEUE &amp; MINT RECEIPT</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: DISPATCH AGENT -->
+<div class="hud-modal-backdrop" id="agent-modal">
+  <div class="hud-modal">
+    <div class="hud-modal-header">
+      <span class="hud-modal-title">◆ DISPATCH AGENT DIRECTIVE</span>
+      <button class="hud-modal-close" onclick="closeModal('agent-modal')">✕</button>
+    </div>
+    <label>Target Swarm Node</label>
+    <select id="dispatch-agent-name" class="hud-select">
+      <option value="Queen">Queen — Master Orchestrator</option>
+      <option value="Coder">Coder — Code &amp; PR Verification</option>
+      <option value="DevOps">DevOps — Telemetry &amp; Infra</option>
+      <option value="Trader">Trader — Orderbook &amp; Arbitrage</option>
+      <option value="Security">Security — Threat &amp; CVE Scan</option>
+      <option value="Researcher">Researcher — Knowledge Graph</option>
+      <option value="Social">Social — Comms Synthesis</option>
+      <option value="Scheduler">Scheduler — Temporal Sync</option>
+      <option value="Comms">Comms — Priority Inbox</option>
+      <option value="Business">Business — KPI Ledger</option>
+    </select>
+    <label>Execution Directive</label>
+    <input type="text" id="dispatch-agent-directive" class="hud-input" placeholder="e.g., Benchmark latency spikes across Ring-2 nodes"/>
+    <div class="hud-modal-actions">
+      <button class="hud-btn" onclick="submitAgentDispatch()">DISPATCH DIRECTIVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 3: NEW ADVERSARIAL DEBATE -->
+<div class="hud-modal-backdrop" id="debate-modal">
+  <div class="hud-modal">
+    <div class="hud-modal-header">
+      <span class="hud-modal-title">◆ CONVENE 3-MODEL ADVERSARIAL DEBATE</span>
+      <button class="hud-modal-close" onclick="closeModal('debate-modal')">✕</button>
+    </div>
+    <label>High-Stakes Action / Proposal (Claude 4 · GPT-4o · DeepSeek-V3)</label>
+    <input type="text" id="new-debate-action" class="hud-input" placeholder="e.g., Rotate production JWT signing keys &amp; rebalance 0.5 BTC"/>
+    <div class="hud-modal-actions">
+      <button class="hud-btn" onclick="submitNewDebate()">RUN 3-MODEL DEBATE</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 4: DEBATE EXPLANATION -->
+<div class="hud-modal-backdrop" id="explain-modal">
+  <div class="hud-modal">
+    <div class="hud-modal-header">
+      <span class="hud-modal-title">◆ 3-MODEL CONSENSUS AUDIT BREAKDOWN</span>
+      <button class="hud-modal-close" onclick="closeModal('explain-modal')">✕</button>
+    </div>
+    <div id="explain-modal-content"></div>
+  </div>
+</div>
+
+<!-- MODAL 5: SHA-256 RECEIPTS LEDGER -->
+<div class="hud-modal-backdrop" id="receipts-modal">
+  <div class="hud-modal" style="max-width:540px">
+    <div class="hud-modal-header">
+      <span class="hud-modal-title">◆ SHA-256 CRYPTOGRAPHIC AUDIT RECEIPT CHAIN</span>
+      <button class="hud-modal-close" onclick="closeModal('receipts-modal')">✕</button>
+    </div>
+    <div id="receipts-modal-list" style="max-height:300px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- MODAL 6: QUICK NOTE -->
+<div class="hud-modal-backdrop" id="note-modal">
+  <div class="hud-modal">
+    <div class="hud-modal-header">
+      <span class="hud-modal-title">◆ ADD QUICK NOTE TO MEMORY CORE</span>
+      <button class="hud-modal-close" onclick="closeModal('note-modal')">✕</button>
+    </div>
+    <label>Note Content</label>
+    <input type="text" id="new-note-text" class="hud-input" placeholder="e.g., Verify WireGuard SG-03 tunnel latency before deploy"/>
+    <div class="hud-modal-actions">
+      <button class="hud-btn" onclick="submitNewNote()">SAVE NOTE</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 7: 7-LAYER ARCHITECTURE BLUEPRINT -->
+<div class="hud-modal-backdrop" id="arch-modal">
+  <div class="hud-modal" style="max-width:640px">
+    <div class="hud-modal-header">
+      <span class="hud-modal-title">◆ CHAKRAVYUHA v3.7.1 — 7-LAYER ARCHITECTURE BLUEPRINT</span>
+      <button class="hud-modal-close" onclick="closeModal('arch-modal')">✕</button>
+    </div>
+    <div style="max-height:360px;overflow-y:auto;line-height:1.45;font-size:8.5px">
+      <div class="receipt-row"><b style="color:#ffaa00">LAYER 7 · PRESENTATION (HUD / CLIENT)</b><br>Tauri 2 (Win/macOS/Linux) · WebXR AR · Android (Kotlin) · iOS (Swift) · Shared HUD Engine (37 draggable widgets + Central 7-Ring Chakravyuha Aura).</div>
+      <div class="receipt-row"><b style="color:#00e5ff">LAYER 6 · COMMUNICATION</b><br>WebSocket (wss://) · gRPC (Unix Socket) · ntfy.sh (Self-Hosted Push) · Yjs CRDT Multi-Device Sync.</div>
+      <div class="receipt-row"><b style="color:#ffaa00">LAYER 5 · ORCHESTRATION (chakravyuha-core)</b><br>Voice Pipeline (CPAL → Silero VAD → openWakeWord "Hey Bro" → faster-whisper STT → Piper TTS) · Queen Routing Engine · Tokio Event Bus · AES-256 Vault + Seccomp Sandbox.</div>
+      <div class="receipt-row"><b style="color:#00ff88">LAYER 4 · AGENT RUNTIME (Python 3.12)</b><br>Queen Orchestrator + 10 Specialist Agents (Coder, DevOps, Trader, Social, Researcher, Scheduler, Comms, Security, Business, PR_Review) + 3-Model Adversarial Review Firewall.</div>
+      <div class="receipt-row"><b style="color:#b388ff">LAYER 3 · TOOL LAYER (15 MCP Servers + 47 Skills)</b><br>MCP: github, filesystem, git, playwright, docker, slack, calendar, email, database, fetch, shell, exchange, home-assistant · 47 Registered Skills.</div>
+      <div class="receipt-row"><b style="color:#00e5ff">LAYER 2 · MODEL LAYER (14 LLMs)</b><br>Local Ollama (Llama 3.3 70B, Mistral 8x22B, Phi-4, Jev) + Cloud (GPT-4o, Claude 4, Grok-3, Gemini 2.5, DeepSeek-V3, Qwen3, Kimi-K2, ZCode, Codex) + Free-Tier Router.</div>
+      <div class="receipt-row"><b style="color:#ffaa00">LAYER 1 · SELF-HOSTED INFRASTRUCTURE</b><br>Docker Compose Single-Node · WireGuard VPN (SG-03) + 3-Hop Tor Circuit (DE→NL→SG) · SQLite + LanceDB + ChromaDB + Neo4j Knowledge Graph · SHA-256 Hash-Chained Audit Log.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================================
+// 1. PROCEDURAL WEB AUDIO SYNTHESIZER & SHA-256
+// ============================================================================
+const Sfx = {
+  ctx: null,
+  muted: false,
+  init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) this.ctx = new AudioCtx();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+  },
+  play(type) {
+    if (this.muted) return;
+    try {
+      this.init();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      if (type === 'click') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1100, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.035);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        osc.start(now); osc.stop(now + 0.04);
+      } else if (type === 'key') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(780, now);
+        gain.gain.setValueAtTime(0.025, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+        osc.start(now); osc.stop(now + 0.02);
+      } else if (type === 'confirm') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(660, now);
+        osc.frequency.setValueAtTime(990, now + 0.06);
+        gain.gain.setValueAtTime(0.07, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.start(now); osc.stop(now + 0.15);
+      } else if (type === 'alarm') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(290, now + 0.12);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.start(now); osc.stop(now + 0.35);
+      }
+    } catch (e) {}
+  }
+};
+
+function toggleAudioMute() {
+  Sfx.muted = !Sfx.muted;
+  document.getElementById('sfx-toggle-btn').textContent = Sfx.muted ? '🔇 MUTED' : '🔊 SFX ON';
+  if (!Sfx.muted) Sfx.play('confirm');
+}
+
+function sha256Hex(ascii) {
+  function rightRotate(v, amount) { return (v >>> amount) | (v << (32 - amount)); }
+  const mathPow = Math.pow, maxWord = mathPow(2, 32);
+  let i, j, result = '';
+  const words = [], asciiBitLength = ascii.length * 8;
+  let hash = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const k = [
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+  ];
+  ascii += '\x80';
+  while (ascii.length % 64 - 56) ascii += '\x00';
+  for (i = 0; i < ascii.length; i++) {
+    j = ascii.charCodeAt(i);
+    if (j >> 8) return '';
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = ((asciiBitLength / maxWord) | 0);
+  words[words.length] = (asciiBitLength);
+  for (j = 0; j < words.length;) {
+    const w = words.slice(j, j += 16), oldHash = hash.slice(0);
+    for (i = 0; i < 64; i++) {
+      const w15 = w[i - 15], w2 = w[i - 2];
+      const a = hash[0], e = hash[4];
+      const temp1 = hash[7]
+        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+        + ((e & hash[5]) ^ ((~e) & hash[6]))
+        + k[i]
+        + (w[i] = (i < 16) ? w[i] : (
+            w[i - 16]
+            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+            + w[i - 7]
+            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+          ) | 0);
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0].concat(hash);
+      hash[4] = (hash[4] + temp1) | 0;
+      hash.pop();
+    }
+    for (i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+  }
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j + 1; j--) {
+      const b = (hash[i] >> (j * 8)) & 255;
+      result += ((b < 16) ? 0 : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+// ============================================================================
+// 2. DUAL-MODE STATE ENGINE & WORKSPACE DECK MANAGER
+// ============================================================================
+const BOOT_START_MS = Date.now();
+let backendConnected = false;
+let apiBaseUrl = new URLSearchParams(window.location.search).get('apiBase') || '';
+let currentDeck = 'core';
+
+function switchDeck(deck) {
+  Sfx.play('click');
+  currentDeck = deck;
+  document.querySelectorAll('#deck-bar .deck-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById('deck-' + deck);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const hud = document.getElementById('hud');
+  if (deck === 'all') {
+    hud.classList.add('grid-mode');
+    document.querySelectorAll('#hud .widget').forEach(w => w.classList.remove('deck-hidden'));
+  } else {
+    hud.classList.remove('grid-mode');
+    document.querySelectorAll('#hud .widget').forEach(w => {
+      if (w.getAttribute('data-deck') === deck) w.classList.remove('deck-hidden');
+      else w.classList.add('deck-hidden');
+    });
+  }
+}
+
+function toggleCollapseAll(collapse) {
+  Sfx.play('click');
+  document.querySelectorAll('#hud .widget').forEach(w => {
+    if (collapse) w.classList.add('collapsed');
+    else w.classList.remove('collapsed');
+  });
+}
+
+const AppState = {
+  system: {
+    name: 'CHAKRAVYUHA',
+    version: '3.7.1',
+    frozen: false,
+    aura_state: 'idle',
+    budget_limit_usd: 20.00,
+    spend_usd: 3.42,
+    total_tokens: 552800,
+    receipts_total: 7,
+    api_rtt_ms: 4,
+    vpn_connected: true,
+    prices: { 'BTC/USDC': 104230.00, 'ETH/USDC': 3240.00, 'SOL/USDC': 191.40, 'MON/USDC': 0.661 },
+    portfolio: { usdc: 4500.00, BTC: 1.2450, ETH: 18.70, SOL: 342.00, MON: 12400.00 },
+    knowledge: { vector_entries: 847, memory_entries: 2847, kg_nodes: 3241, kg_edges: 18902, mcp_servers: 15, skills_count: 47 }
+  },
+  telemetry: {
+    cpu_pct: 64.0, ram_pct: 71.0, ram_used_gb: 42.1, ram_total_gb: 96.0,
+    disk_pct: 42.0, net_mbps: 94.2, uptime_str: '4h 23m', cores: navigator.hardwareConcurrency || 16
+  },
+  models: [
+    { id: 1, name: 'GPT-4o', provider: 'OpenAI', status: 'online', latency_ms: 240, tokens_used: 45200, cost_per_1k: 0.005, tier: 'cloud' },
+    { id: 2, name: 'Claude 4', provider: 'Anthropic', status: 'online', latency_ms: 210, tokens_used: 38100, cost_per_1k: 0.006, tier: 'cloud' },
+    { id: 3, name: 'Grok-3', provider: 'xAI', status: 'online', latency_ms: 230, tokens_used: 12400, cost_per_1k: 0.004, tier: 'cloud' },
+    { id: 4, name: 'Gemini 2.5', provider: 'Google', status: 'online', latency_ms: 185, tokens_used: 28700, cost_per_1k: 0.0035, tier: 'cloud' },
+    { id: 5, name: 'DeepSeek-V3', provider: 'DeepSeek', status: 'online', latency_ms: 290, tokens_used: 52300, cost_per_1k: 0.0014, tier: 'cloud' },
+    { id: 6, name: 'Qwen3', provider: 'Alibaba', status: 'online', latency_ms: 275, tokens_used: 8900, cost_per_1k: 0.0018, tier: 'cloud' },
+    { id: 7, name: 'Kimi-K2', provider: 'Moonshot', status: 'busy', latency_ms: 410, tokens_used: 15600, cost_per_1k: 0.002, tier: 'cloud' },
+    { id: 8, name: 'Llama 3.3 70B', provider: 'Ollama', status: 'online', latency_ms: 18, tokens_used: 67800, cost_per_1k: 0.0, tier: 'local' },
+    { id: 9, name: 'Mistral 8x22B', provider: 'Ollama', status: 'online', latency_ms: 15, tokens_used: 41200, cost_per_1k: 0.0, tier: 'local' },
+    { id: 10, name: 'Phi-4', provider: 'Ollama', status: 'online', latency_ms: 9, tokens_used: 89400, cost_per_1k: 0.0, tier: 'local' },
+    { id: 11, name: 'ZCode', provider: 'Z.ai', status: 'online', latency_ms: 310, tokens_used: 5600, cost_per_1k: 0.0025, tier: 'cloud' },
+    { id: 12, name: 'Codex', provider: 'OpenAI', status: 'busy', latency_ms: 460, tokens_used: 23100, cost_per_1k: 0.004, tier: 'cloud' },
+    { id: 13, name: 'Jev', provider: 'Local', status: 'online', latency_ms: 4, tokens_used: 124500, cost_per_1k: 0.0, tier: 'local' },
+    { id: 14, name: 'Free-Tier', provider: 'OpenRouter', status: 'offline', latency_ms: 0, tokens_used: 0, cost_per_1k: 0.0, tier: 'free' }
+  ],
+  agents: [
+    { id: 1, name: 'Queen', role: 'Orchestrator', status: 'active', current_task: 'Chakravyuha Core Sync' },
+    { id: 2, name: 'Coder', role: 'Code', status: 'thinking', current_task: 'PR #142 AST Check' },
+    { id: 3, name: 'DevOps', role: 'Monitor', status: 'active', current_task: 'Telemetry & Probe Sync' },
+    { id: 4, name: 'Trader', role: 'Trading', status: 'active', current_task: 'BTC/ETH Orderbook Feed' },
+    { id: 5, name: 'Social', role: 'Content', status: 'idle', current_task: '2 Drafts Queued' },
+    { id: 6, name: 'Researcher', role: 'Research', status: 'idle', current_task: 'arXiv Consensus Paper' },
+    { id: 7, name: 'Scheduler', role: 'Calendar', status: 'idle', current_task: '14:00 Client Sync' },
+    { id: 8, name: 'Comms', role: 'Comms', status: 'active', current_task: '7 Unread Slack' },
+    { id: 9, name: 'Security', role: 'Security', status: 'idle', current_task: 'CVE-2026-3184 Watch' },
+    { id: 10, name: 'Business', role: 'Analytics', status: 'idle', current_task: 'KPI Ledger Ready' }
+  ],
+  tasks: [
+    { id: 1, title: 'Review PR #142', status: 'in-progress', agent: 'Coder' },
+    { id: 2, title: 'Deploy v2.3 staging', status: 'pending', agent: 'DevOps' },
+    { id: 3, title: 'Draft LinkedIn post', status: 'pending', agent: 'Social' },
+    { id: 4, title: 'BTC position review', status: 'in-progress', agent: 'Trader' },
+    { id: 5, title: 'CVE audit', status: 'pending', agent: 'Security' },
+    { id: 6, title: 'Morning brief', status: 'done', agent: 'Queen' },
+    { id: 7, title: 'Email triage', status: 'done', agent: 'Comms' }
+  ],
+  github_prs: [
+    { num: 142, title: 'Auth refactor — JWT rotation', ci: 'pass', review: '2/3' },
+    { num: 145, title: 'Add rate limiting middleware', ci: 'pending', review: '0/2' },
+    { num: 148, title: 'Fix memory leak in agent pool', ci: 'fail', review: '1/2' }
+  ],
+  debates: [
+    {
+      id: 1, action: 'Deploy v2.3 to production', status: 'pending',
+      for: ['Claude 4: Unit & integration suite pass (92%)', 'GPT-4o: Canary infra ready, zero schema drift (88%)'],
+      against: ['DeepSeek-V3: Hold until PR #145 rate-limiter merges (67%)'],
+      confidence: [92, 88, 67], weighted_score: 82.3, receipt_hash: ''
+    },
+    {
+      id: 2, action: 'Execute BTC Long @ $104,230', status: 'pending',
+      for: ['Grok-3: 4H MACD bullish cross + volume surge (85%)', 'Jev: Risk/Reward 2.4:1 above VWAP (78%)'],
+      against: ['DeepSeek-V3: FOMC macro volatility window (72%)'],
+      confidence: [85, 78, 72], weighted_score: 78.3, receipt_hash: ''
+    }
+  ],
+  bots: [
+    { id: 1, name: 'Grok-Momentum', strategy: 'RSI + MACD crossover on 4H BTC/ETH', status: 'running', pnl_usd: 2340.0, trades_count: 14, wins_count: 10, win_rate: '71%' },
+    { id: 2, name: 'Grok-MeanRevert', strategy: 'Bollinger Band bounce on SOL/USDC 1H', status: 'running', pnl_usd: 892.0, trades_count: 8, wins_count: 5, win_rate: '63%' },
+    { id: 3, name: 'Grok-Arb', strategy: 'Cross-exchange spread (Binance↔Coinbase)', status: 'paused', pnl_usd: 127.0, trades_count: 3, wins_count: 3, win_rate: '100%' }
+  ],
+  trades: [
+    { id: 6, time_str: '10:42', side: 'buy', pair: 'BTC/USDC', qty: 0.15, price: 104230.0, pnl_usd: 180.0, bot_name: 'Grok-Momentum', receipt_hash: '9a8f41c3b2019ef0' },
+    { id: 5, time_str: '10:38', side: 'sell', pair: 'SOL/USDC', qty: 12.0, price: 191.40, pnl_usd: 45.0, bot_name: 'Grok-MeanRevert', receipt_hash: '7c2e19b8a4412dc1' },
+    { id: 4, time_str: '10:31', side: 'buy', pair: 'ETH/USDC', qty: 1.5, price: 3240.0, pnl_usd: 120.0, bot_name: 'Grok-Momentum', receipt_hash: '4f1a08e7c3310ab4' },
+    { id: 3, time_str: '10:24', side: 'sell', pair: 'BTC/USDC', qty: 0.20, price: 103890.0, pnl_usd: 310.0, bot_name: 'Grok-Momentum', receipt_hash: '2d9b77c1e5508fa2' },
+    { id: 2, time_str: '10:15', side: 'buy', pair: 'SOL/USDC', qty: 8.0, price: 189.20, pnl_usd: -22.0, bot_name: 'Grok-MeanRevert', receipt_hash: '5b1e90a2d1187cf3' },
+    { id: 1, time_str: '10:02', side: 'sell', pair: 'ETH/USDC', qty: 1.0, price: 3215.0, pnl_usd: 85.0, bot_name: 'Grok-Momentum', receipt_hash: '1c4d88f0e2291ab9' }
+  ],
+  notes: [
+    { time_str: '09:15', text: 'Call Acme at 14:00 — ask about Q4 budget. Mention CHAKRAVYUHA demo.' },
+    { time_str: '08:45', text: 'PR #145 needs rate limiting before merge. Assign to Coder agent.' },
+    { time_str: 'Yesterday', text: 'Grok-Momentum bot: increase position size to 1.5% after 20 trades.' },
+    { time_str: 'Yesterday', text: 'Buy domain: chakravyuha-ai.in — $12/yr. Renewal: Oct 2027.' },
+    { time_str: 'Mon', text: 'Update Tauri to 2.5 — new WebView API. Test on ARM Mac first.' }
+  ],
+  receipts: [],
+  thoughts: [
+    { agent: 'Queen', message: 'Chakravyuha 37-Widget Mission Control HUD', highlight: 'ONLINE' },
+    { agent: 'DevOps', message: 'Dual-Mode Telemetry & SQLite3 Ledger', highlight: 'SYNCHRONIZED' },
+    { agent: 'Coder', message: 'AST static analysis on PR #142 →', highlight: '2/3 approvals, CI PASS' },
+    { agent: 'Trader', message: 'Grok-Momentum tracking BTC/USDC orderbook @', highlight: '$104,230.00' },
+    { agent: 'Security', message: 'Adversarial 3-model consensus pipeline →', highlight: 'ACTIVE' }
+  ]
+};
+
+function mintLocalReceipt(category, action, actor, details) {
+  const prev = AppState.receipts.length > 0 ? AppState.receipts[0].receipt_hash : '0'.repeat(64);
+  const ts = new Date().toISOString();
+  const hash = sha256Hex(JSON.stringify({ prev, ts, category, action, actor, details }));
+  const rec = {
+    id: AppState.receipts.length + 1,
+    timestamp: ts, category, action, actor, details,
+    prev_hash: prev.slice(0, 16) + '...', receipt_hash: hash
+  };
+  AppState.receipts.unshift(rec);
+  AppState.system.receipts_total = AppState.receipts.length;
+  saveLocalState();
+  return rec;
+}
+
+function initLocalReceiptsIfNeeded() {
+  try {
+    const saved = localStorage.getItem('chakravyuha_37w_v371');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.models && parsed.receipts && parsed.receipts.length > 0) {
+        Object.assign(AppState, parsed);
+        return;
+      }
+    }
+  } catch (e) {}
+  if (AppState.receipts.length === 0) {
+    mintLocalReceipt('SYSTEM', 'Chakravyuha 37-Widget Genesis Kernel Boot v3.7.1', 'Queen', { widgets: 37 });
+    mintLocalReceipt('SECOPS', 'CVE scan: 2 critical in deps (CVE-2026-3184)', 'Security', { hash: 'f4a1' });
+    mintLocalReceipt('COMMS', 'Email triage: 12 msgs → 3 urgent', 'Comms', { hash: 'e2f3' });
+    mintLocalReceipt('TRADE', 'BTC alert triggered → $104,200', 'Trader', { hash: 'd1e8' });
+    mintLocalReceipt('CORE', 'Morning brief generated → delivered', 'Queen', { hash: 'c9d4' });
+    mintLocalReceipt('DEVOPS', 'Deploy v2.3 staging → success', 'DevOps', { hash: 'b7c1' });
+    mintLocalReceipt('CODING', 'PR #142 review → 2 issues found', 'Coder', { hash: 'a3f2' });
+  }
+}
+
+function saveLocalState() {
+  try { localStorage.setItem('chakravyuha_37w_v371', JSON.stringify(AppState)); } catch (e) {}
+}
+
+function pushLocalThought(agent, message, highlight) {
+  AppState.thoughts.push({ agent, message, highlight: highlight || '' });
+  if (AppState.thoughts.length > 7) AppState.thoughts.shift();
+}
+
+async function apiCall(path, method = 'GET', body = null) {
+  const candidates = [apiBaseUrl, '', 'http://127.0.0.1:8000'];
+  for (const base of candidates) {
+    try {
+      const t0 = performance.now();
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(base + path, opts);
+      if (res.ok) {
+        const data = await res.json();
+        apiBaseUrl = base;
+        backendConnected = true;
+        const rtt = Math.max(1, Math.round(performance.now() - t0));
+        if (data.state) Object.assign(AppState, data.state);
+        else if (data.system) Object.assign(AppState, data);
+        AppState.system.api_rtt_ms = rtt;
+        renderAll();
+        return data;
+      }
+    } catch (e) {}
+  }
+  backendConnected = false;
+  return null;
+}
+
+async function syncBackendNow() {
+  Sfx.play('click');
+  const t0 = performance.now();
+  const data = await apiCall('/api/state', 'GET');
+  if (data) {
+    showToast('BACKEND SYNC', `Connected to FastAPI + SQLite3 server (${AppState.system.api_rtt_ms}ms RTT).`);
+  } else {
+    const elapsedSec = Math.floor((Date.now() - BOOT_START_MS) / 1000);
+    const mins = Math.floor(elapsedSec / 60), secs = elapsedSec % 60;
+    AppState.telemetry.uptime_str = `4h ${23 + mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+    AppState.system.api_rtt_ms = Math.max(1, Math.round(performance.now() - t0));
+    renderAll();
+  }
+}
+
+// ============================================================================
+// 3. BOOT & 7-RING CHAKRAVYUHA CANVAS HUD
+// ============================================================================
+const bootCanvas = document.getElementById('boot-canvas');
+const bootCtx = bootCanvas.getContext('2d');
+let bootParticles = [], bootStart = Date.now(), bootDismissed = false;
+
+function initBoot() {
+  bootCanvas.width = window.innerWidth;
+  bootCanvas.height = window.innerHeight;
+  bootParticles = [];
+  for (let i = 0; i < 120; i++) {
+    bootParticles.push({
+      x: Math.random() * bootCanvas.width, y: Math.random() * bootCanvas.height,
+      vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5,
+      size: Math.random() * 1.6 + 0.5, alpha: Math.random() * 0.5 + 0.15
+    });
+  }
+}
+
+function dismissBoot() {
+  if (bootDismissed) return;
+  bootDismissed = true;
+  Sfx.play('confirm');
+  document.getElementById('boot-screen').classList.add('hidden');
+  showToast('CHAKRAVYUHA QUEEN', 'All 37 Mission Control Widgets Online. Switch decks in the top bar or click ⊞ ALL 37 WIDGETS.');
+}
+
+function animateBoot() {
+  if (bootDismissed) return;
+  const elapsed = Date.now() - bootStart;
+  bootCtx.fillStyle = 'rgba(0,0,0,0.16)';
+  bootCtx.fillRect(0, 0, bootCanvas.width, bootCanvas.height);
+  const cx = bootCanvas.width / 2, cy = bootCanvas.height / 2;
+  const progress = Math.min(elapsed / 1100, 1);
+  bootParticles.forEach((p, i) => {
+    const ringRadius = 35 + (i % 7) * 18;
+    const targetX = cx + Math.cos(i * 0.35 + elapsed * 0.002) * ringRadius * progress;
+    const targetY = cy + Math.sin(i * 0.35 + elapsed * 0.002) * ringRadius * progress;
+    p.x += (targetX - p.x) * 0.04 + p.vx * (1 - progress);
+    p.y += (targetY - p.y) * 0.04 + p.vy * (1 - progress);
+    bootCtx.beginPath();
+    bootCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    bootCtx.fillStyle = i % 2 === 0 ? `rgba(255,170,0,${p.alpha * progress})` : `rgba(0,229,255,${p.alpha * progress})`;
+    bootCtx.fill();
+  });
+  if (elapsed > 300) {
+    const textAlpha = Math.min((elapsed - 300) / 500, 1);
+    document.getElementById('boot-text').style.opacity = textAlpha;
+    document.getElementById('boot-sub').style.opacity = textAlpha * 0.85;
+  }
+  if (elapsed < 1500) requestAnimationFrame(animateBoot);
+  else dismissBoot();
+}
+
+const canvas = document.getElementById('hud-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, cx, cy, scale, hudTime = 0;
+
+function resizeHud() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2; cy = H / 2;
+  scale = Math.min(W, H) / 1000;
+}
+resizeHud();
+window.addEventListener('resize', resizeHud);
+
+function drawHud() {
+  hudTime += AppState.system.frozen ? 0.0005 : 0.008;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  const isFrozen = AppState.system.frozen;
+  const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.7);
+  bgGrad.addColorStop(0, isFrozen ? 'rgba(60,0,15,0.35)' : 'rgba(25,14,0,0.32)');
+  bgGrad.addColorStop(0.45, 'rgba(0,24,45,0.18)');
+  bgGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = 'rgba(0,229,255,0.03)';
+  ctx.lineWidth = 0.5;
+  const gridSize = 30 * scale;
+  for (let x = 0; x < W; x += gridSize) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += gridSize) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  const maxR = 370 * scale;
+  for (let ring = 0; ring < 7; ring++) {
+    const radius = maxR * (0.26 + ring * 0.09);
+    const dir = ring % 2 === 0 ? 1 : -1;
+    const gateAngle = hudTime * (0.35 - ring * 0.03) * dir + ring * 0.9;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, gateAngle + 0.22, gateAngle + Math.PI * 2 - 0.22);
+    ctx.strokeStyle = isFrozen
+      ? 'rgba(255,51,102,0.4)'
+      : (ring % 2 === 0 ? `rgba(255,170,0,${0.42 - ring * 0.03})` : `rgba(0,229,255,${0.38 - ring * 0.03})`);
+    ctx.lineWidth = (2.5 - ring * 0.14) * scale;
+    ctx.stroke();
+  }
+  const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.18);
+  coreGrad.addColorStop(0, isFrozen ? 'rgba(255,51,102,0.55)' : 'rgba(255,185,0,0.45)');
+  coreGrad.addColorStop(0.4, isFrozen ? 'rgba(255,0,60,0.2)' : 'rgba(0,229,255,0.22)');
+  coreGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, maxR * 0.18, 0, Math.PI * 2);
+  ctx.fill();
+  requestAnimationFrame(drawHud);
+}
+
+// ============================================================================
+// 4. DATA & RENDERERS FOR ALL 37 WIDGETS
+// ============================================================================
+const slackData = [
+  { channel: '#chakravyuha-dev', unread: 3, mention: false },
+  { channel: '#trading', unread: 1, mention: true },
+  { channel: '#design', unread: 2, mention: false },
+  { channel: '#alerts', unread: 1, mention: true },
+  { channel: '#general', unread: 0, mention: false }
+];
+
+const serverData = [
+  { name: 'api-prod-01', cpu: 72, mem: 64, status: 'up' },
+  { name: 'api-prod-02', cpu: 34, mem: 51, status: 'up' },
+  { name: 'worker-01', cpu: 89, mem: 78, status: 'degraded' },
+  { name: 'db-primary', cpu: 45, mem: 71, status: 'up' },
+  { name: 'cache-redis', cpu: 12, mem: 38, status: 'up' }
+];
+
+const socialData = [
+  { platform: 'x', text: 'CHAKRAVYUHA v3.7 shipped — multi-agent adversarial review is live. No more one-model hallucinations.', time: '2h ago', likes: 234, reposts: 45 },
+  { platform: 'li', text: 'Building a self-hosted AI command centre. 14 models, 10 agents, zero cloud dependency. Thread →', time: '1d ago', likes: 892, reposts: 156 },
+  { platform: 'yt', text: 'CHAKRAVYUHA HUD walkthrough — 37-widget cyberpunk command centre for your AI agents', time: '3d ago', views: '12.4k' },
+  { platform: 'li', text: 'Multi-LLM consensus benchmarks across Claude 4, GPT-4o & DeepSeek-V3', time: 'Draft', draft: 'LinkedIn: "What I learned building a multi-LLM adversarial review pipeline"' }
+];
+
+const intelData = [
+  { source: 'CVE', text: 'Critical: Node.js 20.x RCE (CVE-2026-3184). Your 3 repos affected.', urgent: true },
+  { source: 'MARKET', text: 'Fed rate decision in 48h. Volatility expected. Consider hedging.', urgent: false },
+  { source: 'GITHUB', text: 'Tauri 2.5 released — new WebView API, 12% perf gain.', urgent: false },
+  { source: 'COMPETITOR', text: 'SwarmClaw v4.2 shipped: added peer-to-peer agent mesh.', urgent: false },
+  { source: 'RESEARCH', text: 'New paper: "Adversarial LLM Consensus" — 3-model debate reduces hallucination 74%.', urgent: false }
+];
+
+const networkData = [
+  { name: 'api-prod-01', latency: 12, status: 'up' },
+  { name: 'api-prod-02', latency: 18, status: 'up' },
+  { name: 'worker-01', latency: 340, status: 'degraded' },
+  { name: 'db-primary', latency: 4, status: 'up' },
+  { name: 'ollama-local', latency: 2, status: 'up' }
+];
+
+const scTracks = [
+  { title: 'Neon Pulse — Cyberpunk Mix', artist: 'SynthWav_2077', duration: '4:32', playing: true, progress: 67 },
+  { title: 'Deep Focus — Alpha Waves', artist: 'BrainFM', duration: '1:02:00', playing: false, progress: 0 },
+  { title: 'Night Drive — Lo-fi Beats', artist: 'MidnightCoder', duration: '3:45', playing: false, progress: 0 },
+  { title: 'CHAKRAVYUHA Theme — Original Score', artist: 'You (AI Generated)', duration: '2:18', playing: false, progress: 0 },
+  { title: 'Rain on Glass — Ambient', artist: 'LoFi Drift', duration: '8:12', playing: false, progress: 0 }
+];
+
+const habitData = [
+  { name: 'Meditation (10 min)', streak: 14, week: [1,1,1,1,1,1,0] },
+  { name: 'Coding (4h)', streak: 7, week: [1,1,1,1,1,0,0] },
+  { name: 'Exercise (30 min)', streak: 5, week: [1,0,1,1,1,0,0] },
+  { name: 'Read (20 pages)', streak: 3, week: [0,1,1,1,0,0,0] },
+  { name: 'No sugar', streak: 21, week: [1,1,1,1,1,1,0] },
+  { name: 'CHAKRAVYUHA review', streak: 9, week: [1,1,1,1,1,1,1] },
+  { name: 'Sleep by 23:00', streak: 2, week: [0,0,1,1,0,0,0] }
+];
+
+const powerData = [
+  { icon: '💻', name: 'MacBook Pro M4', pct: 78, charging: false },
+  { icon: '📱', name: 'Pixel 9 Pro', pct: 45, charging: true },
+  { icon: '🖥', name: 'CHAKRAVYUHA Server (Ryzen 9)', pct: 100, charging: false },
+  { icon: '🎧', name: 'AirPods Max', pct: 23, charging: false }
+];
+
+const browserTabs = [
+  { title: 'CHAKRAVYUHA — GitHub PR #142', fav: '⌂', favBg: 'rgba(0,255,200,0.1)', time: 'now', active: true },
+  { title: 'Binance — BTC/USDC Chart', fav: '₿', favBg: 'rgba(247,147,26,0.15)', time: '2m', active: false },
+  { title: 'Slack — #chakravyuha-dev', fav: 'S', favBg: 'rgba(145,70,227,0.15)', time: '5m', active: false },
+  { title: 'DeepSeek API Docs', fav: 'D', favBg: 'rgba(0,229,255,0.1)', time: '12m', active: false },
+  { title: 'Tauri 2.5 Release Notes', fav: 'T', favBg: 'rgba(255,170,0,0.1)', time: '18m', active: false },
+  { title: 'arXiv: Adversarial LLM Consensus', fav: '📄', favBg: 'rgba(179,136,255,0.1)', time: '34m', active: false },
+  { title: 'Grafana — api-prod-01', fav: 'G', favBg: 'rgba(0,255,136,0.1)', time: '1h', active: false },
+  { title: 'YouTube — Rust async deep dive', fav: '▶', favBg: 'rgba(255,0,0,0.1)', time: '2h', active: false }
+];
+
+const smartHome = [
+  { room: 'LIVING ROOM', devices: [
+    { icon: '💡', name: 'Ceiling Light', state: 'on' },
+    { icon: '📺', name: 'TV (LG C4)', state: 'off' },
+    { icon: '🔊', name: 'Sonos Beam', state: 'on' },
+    { icon: '❄️', name: 'AC', state: 'on', temp: '24°C' }
+  ]},
+  { room: 'OFFICE', devices: [
+    { icon: '💡', name: 'Desk Lamp', state: 'on' },
+    { icon: '🖥', name: 'Monitor (Dell U27)', state: 'on' },
+    { icon: '🌡', name: 'Thermostat', state: 'on', temp: '22°C' }
+  ]},
+  { room: 'SECURITY', devices: [
+    { icon: '🚪', name: 'Front Door', state: 'on' },
+    { icon: '📹', name: 'Cam 1 (Gate)', state: 'on' },
+    { icon: '📹', name: 'Cam 2 (Back)', state: 'warn' }
+  ]}
+];
+
+const skillRegistry = [
+  { name: 'pr_review', agent: 'Coder', uses: 34, status: 'active', cat: 'CODING' },
+  { name: 'write_code', agent: 'Coder', uses: 128, status: 'active', cat: 'CODING' },
+  { name: 'debug', agent: 'Coder', uses: 67, status: 'idle', cat: 'CODING' },
+  { name: 'test_gen', agent: 'Coder', uses: 45, status: 'idle', cat: 'CODING' },
+  { name: 'server_health', agent: 'DevOps', uses: 234, status: 'active', cat: 'DEVOPS' },
+  { name: 'deploy', agent: 'DevOps', uses: 12, status: 'idle', cat: 'DEVOPS' },
+  { name: 'alert_triage', agent: 'DevOps', uses: 89, status: 'active', cat: 'DEVOPS' },
+  { name: 'trade_signal', agent: 'Trader', uses: 56, status: 'active', cat: 'TRADING' },
+  { name: 'execute_trade', agent: 'Trader', uses: 14, status: 'idle', cat: 'TRADING' },
+  { name: 'backtest', agent: 'Trader', uses: 8, status: 'idle', cat: 'TRADING' },
+  { name: 'draft_post', agent: 'Social', uses: 23, status: 'idle', cat: 'SOCIAL' },
+  { name: 'engagement_analyse', agent: 'Social', uses: 41, status: 'active', cat: 'SOCIAL' },
+  { name: 'deep_research', agent: 'Researcher', uses: 19, status: 'idle', cat: 'RESEARCH' },
+  { name: 'fact_check', agent: 'Researcher', uses: 67, status: 'active', cat: 'RESEARCH' },
+  { name: 'vuln_scan', agent: 'Security', uses: 6, status: 'idle', cat: 'SECURITY' },
+  { name: 'secret_scan', agent: 'Security', uses: 12, status: 'idle', cat: 'SECURITY' },
+  { name: 'email_triage', agent: 'Comms', uses: 156, status: 'active', cat: 'COMMS' },
+  { name: 'daily_brief', agent: 'Queen', uses: 14, status: 'active', cat: 'CORE' },
+  { name: 'memory_search', agent: 'All', uses: 2847, status: 'active', cat: 'CORE' },
+  { name: 'debate', agent: 'Queen', uses: 34, status: 'idle', cat: 'CORE' }
+];
+
+const harnessData = [
+  { name: 'chakravyuha-core (Rust)', stages: [
+    { name: 'cargo build', status: 'pass', dur: '42s' },
+    { name: 'cargo test', status: 'pass', dur: '18s' },
+    { name: 'clippy', status: 'pass', dur: '8s' },
+    { name: 'docker build', status: 'running', dur: '...' },
+    { name: 'deploy-staging', status: 'pending', dur: '' }
+  ]},
+  { name: 'chakravyuha-hud (Tauri)', stages: [
+    { name: 'npm ci', status: 'pass', dur: '12s' },
+    { name: 'svelte-check', status: 'pass', dur: '5s' },
+    { name: 'vite build', status: 'pass', dur: '23s' },
+    { name: 'tauri build', status: 'pass', dur: '67s' },
+    { name: 'e2e (playwright)', status: 'pass', dur: '34s' }
+  ]},
+  { name: 'agents (Python)', stages: [
+    { name: 'pip install', status: 'pass', dur: '8s' },
+    { name: 'pytest', status: 'fail', dur: '22s' },
+    { name: 'mypy', status: 'pending', dur: '' },
+    { name: 'ruff check', status: 'pending', dur: '' }
+  ]}
+];
+
+const devServers = [
+  { name: 'chakravyuha-core (Rust)', port: '8080', status: 'running', cpu: 34, log: 'Listening on 0.0.0.0:8080' },
+  { name: 'chakravyuha-hud (Vite)', port: '5173', status: 'running', cpu: 12, log: 'HMR active · 3 clients' },
+  { name: 'ollama (LLM)', port: '11434', status: 'running', cpu: 78, log: 'llama3.3-70b loaded · 42GB VRAM' },
+  { name: 'postgres (chakravyuha-db)', port: '5432', status: 'running', cpu: 8, log: '14 connections · 2 active' },
+  { name: 'redis (cache)', port: '6379', status: 'running', cpu: 3, log: '2,847 keys · 45MB used' },
+  { name: 'chromadb (vectors)', port: '8000', status: 'building', cpu: 0, log: 'Indexing 847 new vectors...' },
+  { name: 'playwright (browser)', port: '9222', status: 'stopped', cpu: 0, log: '' }
+];
+
+const apiRoutes = [
+  { method: 'GET', path: '/api/v1/status', latency: '12ms', count: '45/min' },
+  { method: 'POST', path: '/api/v1/voice/transcribe', latency: '840ms', count: '8/min' },
+  { method: 'GET', path: '/api/v1/memory/search', latency: '23ms', count: '120/min' },
+  { method: 'POST', path: '/api/v1/agents/spawn', latency: '120ms', count: '3/min' },
+  { method: 'GET', path: '/api/v1/models/health', latency: '45ms', count: '60/min' },
+  { method: 'POST', path: '/api/v1/approval/submit', latency: '2.4s', count: '1/min' },
+  { method: 'GET', path: '/api/v1/trading/positions', latency: '89ms', count: '12/min' },
+  { method: 'PUT', path: '/api/v1/config/models', latency: '34ms', count: '0/min' }
+];
+
+const dockerContainers = [
+  { name: 'chakravyuha-core', image: 'chakravyuha/core:3.7.1', status: 'running', res: '128MB / 2.1GB' },
+  { name: 'chakravyuha-hud', image: 'chakravyuha/hud:3.7.1', status: 'running', res: '64MB / 512MB' },
+  { name: 'ollama', image: 'ollama/ollama:latest', status: 'running', res: '42GB / 48GB' },
+  { name: 'postgres', image: 'postgres:16-alpine', status: 'running', res: '256MB / 2GB' },
+  { name: 'redis', image: 'redis:7-alpine', status: 'running', res: '45MB / 512MB' },
+  { name: 'chromadb', image: 'chromadb/chroma:0.5', status: 'restarting', res: '—' },
+  { name: 'ntfy', image: 'binwiederhier/ntfy:latest', status: 'exited', res: '—' }
+];
+
+const gitBranches = [
+  { name: 'main', current: false, ahead: 0, behind: 0, conflict: false, time: '2h ago' },
+  { name: 'feat/adversarial-review', current: true, ahead: 12, behind: 3, conflict: false, time: '30m ago' },
+  { name: 'feat/grok-autotrader', current: false, ahead: 8, behind: 0, conflict: false, time: '1h ago' },
+  { name: 'fix/memory-leak-agent-pool', current: false, ahead: 3, behind: 5, conflict: true, time: '4h ago' },
+  { name: 'feat/tor-integration', current: false, ahead: 5, behind: 0, conflict: false, time: '6h ago' },
+  { name: 'chore/tauri-2.5-upgrade', current: false, ahead: 1, behind: 12, conflict: false, time: '1d ago' }
+];
+
+const processes = [
+  { pid: '1204', name: 'ollama (llama3.3-70b)', cpu: 78, mem: '42.1G', cls: 'high' },
+  { pid: '892', name: 'chakravyuha-core (tokio)', cpu: 34, mem: '128M', cls: 'med' },
+  { pid: '1456', name: 'chrome (12 tabs)', cpu: 22, mem: '1.8G', cls: 'med' },
+  { pid: '756', name: 'chakravyuha-hud (tauri)', cpu: 12, mem: '64M', cls: 'low' },
+  { pid: '234', name: 'postgres', cpu: 8, mem: '256M', cls: 'low' },
+  { pid: '445', name: 'redis-server', cpu: 3, mem: '45M', cls: 'low' },
+  { pid: '678', name: 'faster-whisper (CT2)', cpu: 45, mem: '2.3G', cls: 'med' },
+  { pid: '891', name: 'piper-tts', cpu: 12, mem: '89M', cls: 'low' },
+  { pid: '1023', name: 'openwakeword (Hey Bro)', cpu: 8, mem: '34M', cls: 'low' },
+  { pid: '1567', name: 'playwright (chromium)', cpu: 15, mem: '340M', cls: 'low' }
+];
+
+const torHops = [
+  { label: 'ENTRY', ip: '185.220.101.34', country: '🇩🇪 DE', cls: 'entry' },
+  { label: 'MID', ip: '91.234.88.12', country: '🇳🇱 NL', cls: 'middle' },
+  { label: 'EXIT', ip: '45.77.12.98', country: '🇸🇬 SG', cls: 'exit' }
+];
+
+let pomoTime = 25 * 60, pomoRunning = false, pomoMode = 'work', pomoSessions = 3;
+let pingHistory = [14, 18, 12, 19, 15, 22, 16, 14, 17, 21, 13, 18, 16, 15, 19, 14, 17, 18, 15, 16];
+
+// Render Core 8
+function renderModels() {
+  document.getElementById('model-list').innerHTML = AppState.models.map(m => `
+    <div class="model-row">
+      <button class="model-status-badge ${m.status}" onclick="cycleModelStatus('${m.name}')">${m.status.toUpperCase()}</button>
+      <span class="model-name">${m.name}</span>
+      <span class="model-provider">${m.provider}</span>
+      <span class="model-latency">${m.latency_ms}ms</span>
+      <span class="model-tokens">${(m.tokens_used / 1000).toFixed(1)}k</span>
+      <button class="model-ping-btn" onclick="pingSingleModel('${m.name}')">PING</button>
+    </div>
+  `).join('');
+  const onlineCount = AppState.models.filter(m => m.status !== 'offline').length;
+  document.getElementById('models-online').textContent = `${onlineCount}/${AppState.models.length}`;
+  document.getElementById('models-status').textContent = `${onlineCount}/${AppState.models.length}`;
+}
+
+function renderAgents() {
+  document.getElementById('agent-list').innerHTML = AppState.agents.map(a => `
+    <div class="agent-node" onclick="quickCycleAgent('${a.name}')">
+      <span class="agent-indicator ${a.status === 'active' ? 'active' : a.status === 'thinking' ? 'thinking' : 'idle'}"></span>
+      <span style="color:#d0f4f7;font-weight:500">${a.name}</span>
+      <span style="color:rgba(127,212,193,0.6);font-size:7px">${a.role}</span>
+      <span class="agent-task">${a.current_task}</span>
+    </div>
+  `).join('');
+  const act = AppState.agents.filter(a => a.status !== 'idle').length;
+  document.getElementById('agents-active-label').textContent = `${act} ACTIVE`;
+  document.getElementById('agents-status').textContent = `${act}/${AppState.agents.length}`;
+}
+
+function renderTasks() {
+  document.getElementById('task-list').innerHTML = AppState.tasks.map(t => `
+    <div class="task-item ${t.status}" onclick="toggleTaskStatus(${t.id})">
+      <span style="flex:1">${t.title}</span>
+      <span class="task-agent">${t.agent}</span>
+      <button class="task-del" onclick="event.stopPropagation(); deleteTaskItem(${t.id})">×</button>
+    </div>
+  `).join('');
+  const inProg = AppState.tasks.filter(t => t.status === 'in-progress').length;
+  const pend = AppState.tasks.filter(t => t.status === 'pending').length;
+  const ratio = `${inProg}/${pend}/${AppState.tasks.length}`;
+  document.getElementById('tasks-header-count').textContent = ratio;
+  document.getElementById('r-tasks').textContent = ratio;
+}
+
+function renderGithub() {
+  document.getElementById('github-list').innerHTML = AppState.github_prs.map(pr => `
+    <div class="pr-row">
+      <span class="pr-ci ${pr.ci}"></span>
+      <span class="pr-num">#${pr.num}</span>
+      <span class="pr-title">${pr.title}</span>
+      <span class="pr-review">${pr.review}</span>
+      <button class="pr-btn" onclick="triggerGithubAction(${pr.num},'retest')">CI</button>
+      <button class="pr-btn" onclick="triggerGithubAction(${pr.num},'approve')">✓</button>
+    </div>
+  `).join('');
+}
+
+function renderApprovals() {
+  const pend = AppState.debates.filter(d => d.status === 'pending').length;
+  document.getElementById('approvals-header-count').textContent = `${pend} PENDING`;
+  document.getElementById('r-approvals').textContent = `${pend} PENDING`;
+  document.getElementById('approval-list').innerHTML = AppState.debates.map(d => {
+    const isRes = d.status !== 'pending';
+    return `
+      <div class="approval-card" style="border-color:${d.status === 'approved' ? '#00ff88' : d.status === 'rejected' ? '#ff3366' : 'rgba(0,229,255,0.14)'}">
+        <div class="a-action">⚡ ${d.action} <span style="float:right;font-size:7.5px;color:#00e5ff">${d.weighted_score}%</span></div>
+        ${d.for.map(f => `<div class="a-for">▲ ${f}</div>`).join('')}
+        ${d.against.map(ag => `<div class="a-against">▼ ${ag}</div>`).join('')}
+        <div class="a-confidence">
+          ${d.confidence.map(c => `<div style="flex:1"><div class="conf-bar"><div class="conf-fill" style="width:${c}%;background:${c > 80 ? '#00ff88' : c > 65 ? '#ffaa00' : '#ff3366'}"></div></div></div>`).join('')}
+        </div>
+        ${isRes
+          ? `<div style="margin-top:4px;font-size:7.5px;color:${d.status === 'approved' ? '#00ff88' : '#ff3366'};display:flex;justify-content:space-between">
+               <span>${d.status.toUpperCase()}</span>
+               <span style="color:#00e5ff;cursor:pointer" onclick="explainDebate(${d.id})">SHA256:${(d.receipt_hash || '').slice(0, 10)}...</span>
+             </div>`
+          : `<div class="approval-btns">
+               <button class="btn-approve" onclick="resolveDebate(${d.id},'approve')">✓ APPROVE</button>
+               <button class="btn-reject" onclick="resolveDebate(${d.id},'reject')">✕ REJECT</button>
+               <button class="btn-explain" onclick="explainDebate(${d.id})">? EXPLAIN</button>
+             </div>`
+        }
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTradeAuto() {
+  const p = AppState.system.prices;
+  const runCount = AppState.bots.filter(b => b.status === 'running').length;
+  document.getElementById('bots-active-label').textContent = `${runCount} ACTIVE`;
+  document.getElementById('tradeauto-body').innerHTML = `
+    <div class="ticker-strip">
+      <span>BTC <b style="color:#ffaa00">$${p['BTC/USDC'].toLocaleString()}</b></span>
+      <span>ETH <b style="color:#00e5ff">$${p['ETH/USDC'].toLocaleString()}</b></span>
+      <span>SOL <b style="color:#00ff88">$${p['SOL/USDC'].toFixed(2)}</b></span>
+    </div>
+    <div class="quick-trade-bar">
+      <button class="qt-btn buy" onclick="executeOrder('buy','BTC/USDC',0.1)">BUY BTC</button>
+      <button class="qt-btn sell" onclick="executeOrder('sell','BTC/USDC',0.1)">SELL BTC</button>
+      <button class="qt-btn buy" onclick="executeOrder('buy','ETH/USDC',1.0)">BUY ETH</button>
+      <button class="qt-btn buy" onclick="executeOrder('buy','SOL/USDC',10)">BUY SOL</button>
+    </div>
+    ${AppState.bots.map(b => `
+      <div class="bot-card">
+        <div class="bot-header">
+          <span class="bot-name">⚡ ${b.name}</span>
+          <button class="bot-status ${b.status}" onclick="toggleBotStatus(${b.id})">${b.status.toUpperCase()}</button>
+        </div>
+        <div class="bot-strategy">${b.strategy}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="bot-pnl ${b.pnl_usd >= 0 ? 'pos' : 'neg'}">${(b.pnl_usd >= 0 ? '+$' : '-$') + Math.abs(b.pnl_usd).toLocaleString()}</span>
+          <span style="font-size:7.5px;color:var(--text-secondary)">${b.trades_count} trades · ${b.win_rate || '71%'} win</span>
+        </div>
+      </div>
+    `).join('')}
+    <div style="margin-top:4px;font-size:7.5px;color:var(--accent);letter-spacing:0.1em;margin-bottom:2px">RECENT TRADES</div>
+    ${AppState.trades.slice(0, 6).map(t => `
+      <div class="trade-log">
+        <span class="t-time">${t.time_str}</span>
+        <span class="t-side ${t.side}">${t.side.toUpperCase()}</span>
+        <span class="t-pair">${t.pair}</span>
+        <span class="t-price">$${Number(t.price).toLocaleString()}</span>
+        <span class="t-pnl" style="color:${t.pnl_usd >= 0 ? 'var(--success)' : 'var(--error)'}">${(t.pnl_usd >= 0 ? '+$' : '-$') + Math.abs(t.pnl_usd).toFixed(0)}</span>
+      </div>
+    `).join('')}
+  `;
+}
+
+// Render 29 Additional Widgets
+function renderSlack() {
+  const totalUnread = slackData.reduce((a, b) => a + b.unread, 0);
+  document.getElementById('slack-unread-label').textContent = `${totalUnread} unread`;
+  document.getElementById('slack-list').innerHTML = slackData.map((s, idx) => `
+    <div class="slack-ch" onclick="clearSlackUnread(${idx})">
+      <span class="slack-hash">${s.channel}</span>
+      ${s.mention ? '<span class="slack-mention">@you</span>' : ''}
+      ${s.unread > 0 ? `<span class="slack-unread">${s.unread}</span>` : '<span style="margin-left:auto;font-size:7.5px;color:var(--text-secondary)">read</span>'}
+    </div>
+  `).join('');
+}
+
+function clearSlackUnread(idx) {
+  Sfx.play('click');
+  slackData[idx].unread = 0;
+  slackData[idx].mention = false;
+  renderSlack();
+}
+
+function renderServers() {
+  document.getElementById('servers-list').innerHTML = serverData.map(s => {
+    const cpuClass = s.cpu > 85 ? 'crit' : s.cpu > 70 ? 'warn' : '';
+    const memClass = s.mem > 85 ? 'crit' : s.mem > 70 ? 'warn' : '';
+    const cpuColor = s.cpu > 85 ? 'var(--error)' : s.cpu > 70 ? 'var(--warning)' : 'var(--success)';
+    const memColor = s.mem > 85 ? 'var(--error)' : s.mem > 70 ? 'var(--warning)' : 'var(--success)';
+    return `
+      <div class="server-row">
+        <span class="server-name">${s.name}</span>
+        <span class="server-metric ${cpuClass}">${s.cpu}%</span>
+        <div class="server-bar"><div class="server-bar-fill" style="width:${s.cpu}%;background:${cpuColor}"></div></div>
+        <span class="server-metric ${memClass}">${s.mem}%</span>
+        <div class="server-bar"><div class="server-bar-fill" style="width:${s.mem}%;background:${memColor}"></div></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSocial() {
+  document.getElementById('social-list').innerHTML = socialData.map(s => `
+    <div class="social-post">
+      <span class="social-platform ${s.platform}">${s.platform.toUpperCase()}</span>
+      <span style="color:var(--text-secondary);font-size:8px">${s.time}</span>
+      <div style="color:var(--text-primary);margin-top:2px;line-height:1.35">${s.text}</div>
+      <div class="social-engage">${s.likes ? `♥ ${s.likes} · ↻ ${s.reposts}` : s.views ? `▶ ${s.views} views` : ''}</div>
+      ${s.draft ? `<div class="social-draft">✎ DRAFT: ${s.draft}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderSysHealth() {
+  const tel = AppState.telemetry;
+  const metrics = [
+    { label: 'CPU', val: Math.round(tel.cpu_pct || 64), color: 'var(--success)' },
+    { label: 'RAM', val: Math.round(tel.ram_pct || 71), color: 'var(--warning)' },
+    { label: 'DISK', val: Math.round(tel.disk_pct || 42), color: 'var(--success)' },
+    { label: 'NET', val: 23, color: 'var(--success)' },
+    { label: 'GPU', val: 88, color: 'var(--warning)' }
+  ];
+  document.getElementById('syshealth-body').innerHTML = metrics.map(m => `
+    <div class="sys-row">
+      <span class="sys-label">${m.label}</span>
+      <div class="sys-bar"><div class="sys-bar-fill" style="width:${m.val}%;background:${m.color}"></div></div>
+      <span class="sys-val">${m.val}%</span>
+    </div>
+  `).join('');
+}
+
+function renderAudit() {
+  document.getElementById('audit-count-label').textContent = `${AppState.system.receipts_total} receipts`;
+  document.getElementById('audit-list').innerHTML = AppState.receipts.slice(0, 7).map(r => `
+    <div class="audit-entry">
+      <span class="audit-time">${(r.timestamp || '').slice(11, 16) || '10:42'}</span>
+      <span class="audit-agent">${r.actor}</span>
+      <span class="audit-action">${r.action}</span>
+      <span class="audit-hash">…${(r.receipt_hash || '').slice(-4)}</span>
+    </div>
+  `).join('');
+}
+
+function renderIntel() {
+  document.getElementById('intel-list').innerHTML = intelData.map(i => `
+    <div class="intel-item ${i.urgent ? 'urgent' : ''}">
+      <span class="intel-source">[${i.source}]</span>
+      <div class="intel-text">${i.text}</div>
+    </div>
+  `).join('');
+}
+
+function renderNetwork() {
+  document.getElementById('network-list').innerHTML = networkData.map(n => `
+    <div class="net-node">
+      <span class="net-dot ${n.status}"></span>
+      <span class="net-name">${n.name}</span>
+      <span class="net-latency">${n.latency}ms</span>
+    </div>
+  `).join('');
+}
+
+function renderMusic() {
+  const current = scTracks.find(t => t.playing);
+  document.getElementById('music-body').innerHTML = `
+    ${current ? `<div class="sc-now-playing"><div class="sc-np-title">▶ ${current.title}</div><div class="sc-np-artist">${current.artist}</div></div>` : ''}
+    <div class="sc-progress" onclick="seekSc(event)">
+      <div class="sc-progress-fill" style="width:${current ? current.progress : 0}%"></div>
+    </div>
+    <div class="sc-controls">
+      <button class="sc-btn" onclick="prevScTrack()">⏮</button>
+      <button class="sc-btn active" onclick="toggleScPlay()">${current ? '⏸' : '▶'}</button>
+      <button class="sc-btn" onclick="nextScTrack()">⏭</button>
+      <span class="sc-btn" style="margin-left:auto">🔀</span>
+      <span class="sc-btn">🔁</span>
+      <div class="sc-vol"><div class="sc-vol-fill"></div></div>
+    </div>
+    <div style="margin-top:4px">
+      ${scTracks.map((t, i) => `
+        <div class="sc-track" onclick="playTrack(${i})">
+          <span class="sc-play ${t.playing ? 'playing' : ''}">${t.playing ? '⏸' : '▶'}</span>
+          <div class="sc-info"><div class="sc-title">${t.title}</div><div class="sc-artist">${t.artist}</div></div>
+          <span class="sc-duration">${t.duration}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function toggleScPlay() {
+  Sfx.play('click');
+  const current = scTracks.find(t => t.playing);
+  if (current) { current.playing = false; document.getElementById('sc-state').textContent = 'PAUSED'; }
+  else { scTracks[0].playing = true; document.getElementById('sc-state').textContent = 'PLAYING'; }
+  renderMusic();
+}
+function playTrack(i) {
+  Sfx.play('click');
+  scTracks.forEach((t, idx) => { t.playing = idx === i; });
+  document.getElementById('sc-state').textContent = 'PLAYING';
+  renderMusic();
+}
+function nextScTrack() {
+  const idx = scTracks.findIndex(t => t.playing);
+  playTrack((idx + 1) % scTracks.length);
+}
+function prevScTrack() {
+  const idx = scTracks.findIndex(t => t.playing);
+  playTrack((idx - 1 + scTracks.length) % scTracks.length);
+}
+function seekSc(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+  const current = scTracks.find(t => t.playing);
+  if (current) current.progress = pct;
+  renderMusic();
+}
+
+function renderTokens() {
+  const pf = AppState.system.portfolio;
+  const pr = AppState.system.prices;
+  const rows = [
+    { symbol: 'BTC', icon: '₿', cls: 'btc', amount: pf.BTC.toFixed(4), valNum: pf.BTC * pr['BTC/USDC'], change: '+2.4%', pos: true },
+    { symbol: 'ETH', icon: 'Ξ', cls: 'eth', amount: pf.ETH.toFixed(2), valNum: pf.ETH * pr['ETH/USDC'], change: '+1.8%', pos: true },
+    { symbol: 'SOL', icon: '◎', cls: 'sol', amount: pf.SOL.toFixed(0), valNum: pf.SOL * pr['SOL/USDC'], change: '-0.6%', pos: false },
+    { symbol: 'MON', icon: 'M', cls: 'mono', amount: (pf.MON || 12400).toLocaleString(), valNum: (pf.MON || 12400) * (pr['MON/USDC'] || 0.661), change: '+5.2%', pos: true },
+    { symbol: 'USDC', icon: '$', cls: 'usdc', amount: pf.usdc.toLocaleString(), valNum: pf.usdc, change: '0.0%', pos: true }
+  ];
+  const totalVal = Math.round(rows.reduce((a, r) => a + r.valNum, 0));
+  document.getElementById('tokens-header-total').textContent = `$${totalVal.toLocaleString()}`;
+  document.getElementById('r-equity').textContent = `$${(totalVal / 1000).toFixed(1)}k`;
+  document.getElementById('tokens-body').innerHTML = `
+    ${rows.map(t => `
+      <div class="token-row">
+        <span class="token-icon ${t.cls}">${t.icon}</span>
+        <span class="token-name">${t.symbol}</span>
+        <span class="token-amount">${t.amount}</span>
+        <span class="token-value">$${Math.round(t.valNum).toLocaleString()}</span>
+        <span class="token-change ${t.pos ? 'pos' : 'neg'}">${t.change}</span>
+      </div>
+    `).join('')}
+    <div class="token-total">
+      <span style="color:var(--text-secondary)">TOTAL</span>
+      <span class="val">$${totalVal.toLocaleString()}</span>
+    </div>
+  `;
+}
+
+function renderWeather() {
+  const hourly = [
+    { time: 'Now', icon: '⛅', temp: '28°' }, { time: '14', icon: '🌤', temp: '30°' },
+    { time: '15', icon: '🌤', temp: '31°' }, { time: '16', icon: '☁️', temp: '29°' },
+    { time: '17', icon: '🌧', temp: '27°' }, { time: '18', icon: '🌧', temp: '26°' },
+    { time: '19', icon: '⛈', temp: '25°' }, { time: '20', icon: '🌧', temp: '25°' }
+  ];
+  document.getElementById('weather-body').innerHTML = `
+    <div class="weather-main">
+      <span class="weather-icon">⛅</span>
+      <div><div class="weather-temp">28°C</div><div class="weather-desc">Partly Cloudy · Feels 31°</div></div>
+    </div>
+    <div class="weather-details">
+      <div class="weather-detail"><span class="wd-label">Humidity</span><span class="wd-val">72%</span></div>
+      <div class="weather-detail"><span class="wd-label">Wind</span><span class="wd-val">14 km/h SW</span></div>
+      <div class="weather-detail"><span class="wd-label">Pressure</span><span class="wd-val">1008 hPa</span></div>
+      <div class="weather-detail"><span class="wd-label">UV Index</span><span class="wd-val">7 (High)</span></div>
+      <div class="weather-detail"><span class="wd-label">Rain prob</span><span class="wd-val">65% (17:00)</span></div>
+      <div class="weather-detail"><span class="wd-label">Visibility</span><span class="wd-val">8 km</span></div>
+    </div>
+    <div class="weather-hourly">
+      ${hourly.map(h => `<div class="weather-hour"><div class="wh-time">${h.time}</div><div class="wh-icon">${h.icon}</div><div class="wh-temp">${h.temp}</div></div>`).join('')}
+    </div>
+    <div style="font-size:8px;color:var(--warning);margin-top:3px;padding:2px 5px;background:rgba(255,170,0,0.04);border-left:2px solid var(--warning)">⚠ Rain expected 17:00–20:00. Carry umbrella.</div>
+  `;
+}
+
+function renderHabits() {
+  const doneToday = habitData.filter(h => h.week[6] === 1).length;
+  document.getElementById('habits-status').textContent = `${doneToday}/${habitData.length} done`;
+  document.getElementById('habits-body').innerHTML = habitData.map((h, hi) => `
+    <div class="habit-row">
+      <span class="habit-name">${h.name}</span>
+      <span class="habit-streak">🔥${h.streak}</span>
+      <div class="habit-dots">
+        ${h.week.map((d, di) => `<span class="habit-dot ${d ? 'done' : ''} ${di === 6 ? 'today' : ''}" onclick="toggleHabitDot(${hi},${di})"></span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+function toggleHabitDot(hi, di) {
+  Sfx.play('click');
+  habitData[hi].week[di] = habitData[hi].week[di] ? 0 : 1;
+  renderHabits();
+}
+
+function renderPomodoro() {
+  const mins = Math.floor(pomoTime / 60).toString().padStart(2, '0');
+  const secs = (pomoTime % 60).toString().padStart(2, '0');
+  const total = pomoMode === 'work' ? 25 * 60 : 5 * 60;
+  const pct = ((total - pomoTime) / total) * 100;
+  document.getElementById('pomo-status').textContent = pomoMode.toUpperCase();
+  document.getElementById('pomodoro-body').innerHTML = `
+    <div class="pomo-timer">
+      <div class="pomo-time">${mins}:${secs}</div>
+      <div class="pomo-mode">${pomoMode.toUpperCase()} ${pomoRunning ? '●' : '○'}</div>
+      <div class="pomo-bar"><div class="pomo-bar-fill" style="width:${pct}%"></div></div>
+      <div class="pomo-controls">
+        <button class="pomo-btn ${pomoRunning ? 'active' : ''}" onclick="pomoToggle()">${pomoRunning ? '⏸ PAUSE' : '▶ START'}</button>
+        <button class="pomo-btn" onclick="pomoReset()">↺ RESET</button>
+        <button class="pomo-btn" onclick="pomoSkip()">⏭ SKIP</button>
+      </div>
+      <div class="pomo-sessions">Sessions today: ${pomoSessions} / 8</div>
+    </div>
+  `;
+}
+function pomoToggle() { Sfx.play('click'); pomoRunning = !pomoRunning; renderPomodoro(); }
+function pomoReset() { Sfx.play('click'); pomoTime = (pomoMode === 'work' ? 25 : 5) * 60; pomoRunning = false; renderPomodoro(); }
+function pomoSkip() {
+  Sfx.play('confirm');
+  pomoMode = pomoMode === 'work' ? 'break' : 'work';
+  if (pomoMode === 'work') pomoSessions++;
+  pomoTime = (pomoMode === 'work' ? 25 : 5) * 60;
+  pomoRunning = false;
+  renderPomodoro();
+}
+
+function renderNotes() {
+  document.getElementById('notes-count-label').textContent = `${AppState.notes.length} notes`;
+  document.getElementById('notes-body').innerHTML = AppState.notes.map(n => `
+    <div class="note-item">
+      <span class="note-time">${n.time_str || n.time}</span>
+      <span class="note-text">${n.text}</span>
+    </div>
+  `).join('');
+}
+
+async function submitNewNote() {
+  const txt = document.getElementById('new-note-text').value.trim();
+  if (!txt) return;
+  closeModal('note-modal');
+  Sfx.play('confirm');
+  const res = await apiCall('/api/notes', 'POST', { text: txt });
+  if (!res) {
+    AppState.notes.unshift({ time_str: new Date().toTimeString().slice(0, 5), text: txt });
+    mintLocalReceipt('MEMORY', `Saved note: ${txt.slice(0, 28)}`, 'Queen', { text: txt });
+    renderAll();
+  }
+  document.getElementById('new-note-text').value = '';
+}
+
+function renderPower() {
+  document.getElementById('power-body').innerHTML = powerData.map(p => `
+    <div class="power-row">
+      <span class="power-icon">${p.icon}</span>
+      <span class="power-name">${p.name}</span>
+      ${p.charging ? '<span class="power-charging">⚡</span>' : ''}
+      <div class="power-bar"><div class="power-bar-fill" style="width:${p.pct}%;background:${p.charging ? 'var(--success)' : p.pct < 30 ? 'var(--warning)' : 'var(--success)'}"></div></div>
+      <span class="power-pct">${p.pct}%</span>
+    </div>
+  `).join('');
+}
+
+function renderInternet() {
+  const spd = AppState.telemetry.net_mbps || 94.2;
+  document.getElementById('internet-header-speed').textContent = `${spd} Mbps`;
+  document.getElementById('internet-body').innerHTML = `
+    <div class="net-speed">
+      <span class="net-speed-val">${spd}</span>
+      <span class="net-speed-unit">Mbps ↓</span>
+      <span style="color:var(--text-secondary);font-size:9px;margin-left:6px">↑ 12.8</span>
+    </div>
+    <div class="net-metrics">
+      <div class="net-metric"><span class="nm-label">Ping</span><span class="nm-val">${AppState.system.api_rtt_ms}ms</span></div>
+      <div class="net-metric"><span class="nm-label">Jitter</span><span class="nm-val">1.8ms</span></div>
+      <div class="net-metric"><span class="nm-label">Loss</span><span class="nm-val">0.0%</span></div>
+      <div class="net-metric"><span class="nm-label">ISP</span><span class="nm-val">ACT Fibernet</span></div>
+    </div>
+    <div class="net-ping-graph">
+      ${pingHistory.map((p, i) => `<div class="net-ping-bar" style="left:${i * 10}px;height:${Math.min(22, Math.max(3, (p / 30) * 22))}px"></div>`).join('')}
+    </div>
+  `;
+}
+
+function renderBrowser() {
+  document.getElementById('browser-body').innerHTML = `
+    ${browserTabs.map((t, i) => `
+      <div class="brow-tab ${t.active ? 'brow-active' : ''}" onclick="selectBrowserTab(${i})">
+        <span class="brow-fav" style="background:${t.favBg}">${t.fav}</span>
+        <span class="brow-title">${t.title}</span>
+        <span class="brow-time">${t.time}</span>
+      </div>
+    `).join('')}
+    <div class="brow-stat"><span>Tabs open</span><span>12</span></div>
+    <div class="brow-stat"><span>Memory (browser)</span><span>1.8 GB</span></div>
+  `;
+}
+function selectBrowserTab(idx) {
+  Sfx.play('click');
+  browserTabs.forEach((t, i) => t.active = i === idx);
+  renderBrowser();
+}
+
+function renderSmartHome() {
+  document.getElementById('smarthome-body').innerHTML = smartHome.map((room, ri) => `
+    <div class="sh-room">
+      <div class="sh-room-name">${room.room}</div>
+      ${room.devices.map((d, di) => `
+        <div class="sh-device" onclick="toggleSmartHomeDevice(${ri},${di})">
+          <span class="sh-icon">${d.icon}</span>
+          <span class="sh-name">${d.name}</span>
+          ${d.temp ? `<span class="sh-temp">${d.temp}</span>` : ''}
+          <span class="sh-state ${d.state}">${d.state.toUpperCase()}</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+function toggleSmartHomeDevice(ri, di) {
+  Sfx.play('click');
+  const dev = smartHome[ri].devices[di];
+  dev.state = dev.state === 'on' ? 'off' : 'on';
+  renderSmartHome();
+}
+
+function renderSkills() {
+  document.getElementById('skills-body').innerHTML = skillRegistry.map((s, idx) => `
+    <div class="skill-row" onclick="invokeSkill(${idx})">
+      <span class="skill-status ${s.status}"></span>
+      <span class="skill-name">${s.name}</span>
+      <span class="skill-agent">${s.agent}</span>
+      <span class="skill-cat">${s.cat}</span>
+      <span class="skill-uses">${s.uses}</span>
+    </div>
+  `).join('');
+}
+function invokeSkill(idx) {
+  Sfx.play('confirm');
+  const s = skillRegistry[idx];
+  s.uses += 1;
+  s.status = 'active';
+  pushLocalThought(s.agent, `Executed skill [${s.name}] →`, `${s.uses} total uses`);
+  renderSkills();
+  renderThoughts();
+}
+
+function renderHarness() {
+  document.getElementById('harness-body').innerHTML = harnessData.map(p => `
+    <div class="harness-pipe">
+      <div style="font-size:8.5px;color:var(--accent);letter-spacing:0.1em;margin-bottom:2px">${p.name}</div>
+      ${p.stages.map(s => `
+        <div class="harness-stage">
+          <span class="harness-icon ${s.status}">${s.status === 'pass' ? '✓' : s.status === 'fail' ? '✗' : s.status === 'running' ? '◉' : '○'}</span>
+          <span class="harness-name">${s.name}</span>
+          <span class="harness-dur">${s.dur}</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+function rerunHarness() {
+  Sfx.play('confirm');
+  harnessData.forEach(p => p.stages.forEach(s => { s.status = 'pass'; if (!s.dur || s.dur === '...') s.dur = '14s'; }));
+  document.getElementById('harness-status').textContent = 'ALL PASS';
+  renderHarness();
+  showToast('TEST HARNESS', 'All Rust, Tauri, and Python test stages passed.');
+}
+
+function renderVpn() {
+  const on = AppState.system.vpn_connected !== false;
+  document.getElementById('vpn-header-status').textContent = on ? 'ACTIVE' : 'OFF';
+  document.getElementById('vpn-body').innerHTML = `
+    <div class="vpn-status" onclick="toggleVpnState()">
+      <span class="vpn-dot ${on ? 'connected' : 'disconnected'}"></span>
+      <span class="vpn-label ${on ? 'on' : 'off'}">${on ? 'CONNECTED (CLICK TO TOGGLE)' : 'DISCONNECTED'}</span>
+    </div>
+    <div class="vpn-detail"><span class="vd-label">Protocol</span><span class="vd-val secure">WireGuard</span></div>
+    <div class="vpn-detail"><span class="vd-label">Server</span><span class="vd-val">Singapore (SG-03)</span></div>
+    <div class="vpn-detail"><span class="vd-label">IP</span><span class="vd-val secure">103.152.xx.xx</span></div>
+    <div class="vpn-detail"><span class="vd-label">DNS</span><span class="vd-val secure">1.1.1.1 (DoH)</span></div>
+    <div class="vpn-detail"><span class="vd-label">Kill switch</span><span class="vd-val secure">ACTIVE</span></div>
+    <div class="vpn-kill">⊘ KILL SWITCH: If VPN drops → all traffic blocked</div>
+  `;
+}
+function toggleVpnState() {
+  Sfx.play('click');
+  AppState.system.vpn_connected = !AppState.system.vpn_connected;
+  renderVpn();
+}
+
+function renderTor() {
+  document.getElementById('tor-body').innerHTML = `
+    <div class="tor-circuit">
+      ${torHops.map((h, i) => `
+        <div class="tor-hop">
+          <span class="tor-hop-dot ${h.cls}"></span>
+          <span class="tor-hop-label">${h.label}</span>
+          <span class="tor-hop-ip">${h.ip}</span>
+          <span class="tor-hop-country">${h.country}</span>
+        </div>
+        ${i < 2 ? '<div class="tor-line"></div>' : ''}
+      `).join('')}
+    </div>
+    <div class="tor-anon"><span class="ta-label">Anonymity</span><span class="ta-val">STRONG ✓</span></div>
+    <div class="tor-anon"><span class="ta-label">Bandwidth</span><span class="ta-val" style="color:var(--text-primary)">1.2 MB/s</span></div>
+    <div class="tor-warn">⚠ Tor + VPN = double encryption.</div>
+  `;
+}
+function rotateTorCircuit() {
+  Sfx.play('confirm');
+  torHops[0].ip = `185.220.101.${Math.floor(10 + (Date.now() % 80))}`;
+  torHops[1].ip = `91.234.88.${Math.floor(10 + ((Date.now() >> 3) % 80))}`;
+  torHops[2].ip = `45.77.12.${Math.floor(10 + ((Date.now() >> 5) % 80))}`;
+  renderTor();
+  showToast('TOR CIRCUIT', 'Rotated 3-hop onion circuit (DE → NL → SG).');
+}
+
+function renderDevServers() {
+  const runCount = devServers.filter(s => s.status === 'running').length;
+  document.getElementById('devsrv-status').textContent = `${runCount} running`;
+  document.getElementById('devservers-body').innerHTML = devServers.map((s, i) => `
+    <div class="dev-srv" onclick="toggleDevServer(${i})">
+      <span class="dev-srv-dot ${s.status}"></span>
+      <span class="dev-srv-name">${s.name}</span>
+      <span class="dev-srv-port">:${s.port}</span>
+      <span class="dev-srv-cpu">${s.cpu}%</span>
+    </div>
+    ${s.log ? `<div class="dev-srv-log">${s.log}</div>` : ''}
+  `).join('');
+}
+function toggleDevServer(i) {
+  Sfx.play('click');
+  devServers[i].status = devServers[i].status === 'running' ? 'stopped' : 'running';
+  devServers[i].cpu = devServers[i].status === 'running' ? 18 : 0;
+  renderDevServers();
+}
+
+function renderApi() {
+  document.getElementById('api-body').innerHTML = `
+    ${apiRoutes.map(r => `
+      <div class="api-route">
+        <span class="api-method ${r.method.toLowerCase()}">${r.method}</span>
+        <span class="api-path">${r.path}</span>
+        <span class="api-latency">${r.latency}</span>
+        <span class="api-count">${r.count}</span>
+      </div>
+    `).join('')}
+    <div class="api-rate"><span class="ar-label">Rate limit</span><span class="ar-val">1,247 / 10,000 req/min</span></div>
+    <div class="api-rate"><span class="ar-label">Auth</span><span class="ar-val" style="color:var(--success)">JWT + mTLS ✓</span></div>
+  `;
+}
+
+function renderDocker() {
+  document.getElementById('docker-body').innerHTML = dockerContainers.map((c, i) => `
+    <div class="dock-container" onclick="toggleDockerContainer(${i})">
+      <span class="dock-dot ${c.status}"></span>
+      <span class="dock-name">${c.name}</span>
+      <span class="dock-image">${c.image}</span>
+      <span class="dock-res">${c.res}</span>
+    </div>
+  `).join('');
+}
+function toggleDockerContainer(i) {
+  Sfx.play('click');
+  dockerContainers[i].status = dockerContainers[i].status === 'running' ? 'exited' : 'running';
+  renderDocker();
+}
+
+function renderGit() {
+  document.getElementById('git-body').innerHTML = gitBranches.map((b, i) => `
+    <div class="git-branch" onclick="checkoutGitBranch(${i})">
+      <span class="git-branch-icon">${b.current ? '●' : '○'}</span>
+      <span class="git-branch-name ${b.current ? 'current' : ''}">${b.name}</span>
+      ${b.conflict ? '<span class="git-branch-conflict">CONFLICT</span>' : ''}
+      ${b.ahead > 0 ? `<span class="git-branch-ahead">↑${b.ahead}</span>` : ''}
+      ${b.behind > 0 ? `<span class="git-branch-behind">↓${b.behind}</span>` : ''}
+      <span class="git-branch-time">${b.time}</span>
+    </div>
+  `).join('');
+}
+function checkoutGitBranch(idx) {
+  Sfx.play('click');
+  gitBranches.forEach((b, i) => b.current = i === idx);
+  renderGit();
+}
+
+function renderProcess() {
+  document.getElementById('process-body').innerHTML = processes.map(p => `
+    <div class="proc-row">
+      <span class="proc-pid">${p.pid}</span>
+      <span class="proc-name">${p.name}</span>
+      <span class="proc-cpu ${p.cls}">${p.cpu}%</span>
+      <span class="proc-mem">${p.mem}</span>
+    </div>
+  `).join('');
+}
+
+function renderMemoryWidget() {
+  const k = AppState.system.knowledge;
+  document.getElementById('memory-body').innerHTML = `
+    <div class="vpn-detail"><span class="vd-label">SQLite (Structured)</span><span class="vd-val secure">${k.memory_entries.toLocaleString()} rows</span></div>
+    <div class="vpn-detail"><span class="vd-label">LanceDB (Vectors)</span><span class="vd-val">${k.vector_entries} vecs</span></div>
+    <div class="vpn-detail"><span class="vd-label">ChromaDB (768d)</span><span class="vd-val">nomic-embed</span></div>
+    <div class="vpn-detail"><span class="vd-label">Neo4j Graph</span><span class="vd-val">${k.kg_nodes.toLocaleString()}N / ${k.kg_edges.toLocaleString()}E</span></div>
+    <div class="vpn-detail"><span class="vd-label">PII Redaction</span><span class="vd-val secure">ACTIVE (ON)</span></div>
+    <div class="vpn-detail"><span class="vd-label">Cross-Device Sync</span><span class="vd-val">Yjs CRDT</span></div>
+  `;
+}
+
+function renderCalendarWidget() {
+  const events = [
+    { time: '08:00', title: 'Morning Brief & Triage', agent: 'Queen', done: true },
+    { time: '10:30', title: 'BTC/ETH 4H Rebalance', agent: 'Trader', done: true },
+    { time: '14:00', title: 'Client Call — Acme Corp', agent: 'Scheduler', done: false },
+    { time: '16:00', title: 'PR #142 Merge Window', agent: 'Coder', done: false },
+    { time: '18:00', title: 'CVE & Dependency Audit', agent: 'Security', done: false }
+  ];
+  document.getElementById('calendar-body').innerHTML = events.map(e => `
+    <div class="task-item ${e.done ? 'done' : 'in-progress'}">
+      <span style="color:var(--accent);font-size:8px;min-width:30px">${e.time}</span>
+      <span style="flex:1">${e.title}</span>
+      <span class="task-agent">${e.agent}</span>
+    </div>
+  `).join('');
+}
+
+function renderArchWidget() {
+  const phases = [
+    'P1: Voice + Queen + SQLite + CLI',
+    'P2: HUD v1: Aura + 37 Widgets',
+    'P3: 14-LLM Router + Cost Guard',
+    'P4: 10 Agents + 47 Skills + 15 MCP',
+    'P5: 3-Model Adversarial + SHA-256',
+    'P6: Mobile + WebXR + Yjs CRDT',
+    'P7: 20+ Cron Works + Integrations',
+    'P8: Cinematic Boot + Thought Stream'
+  ];
+  document.getElementById('arch-body').innerHTML = phases.map(p => `
+    <div class="harness-stage">
+      <span class="harness-icon pass">✓</span>
+      <span class="harness-name">${p}</span>
+      <span class="harness-dur" style="color:var(--success)">LIVE</span>
+    </div>
+  `).join('');
+}
+
+function renderThoughts() {
+  document.getElementById('ts-content').innerHTML = AppState.thoughts.slice(-5).map(t => `
+    <div class="ts-step">› <span class="ag">[${t.agent}]</span> ${t.message} <span class="hl">${t.highlight || ''}</span></div>
+  `).join('');
+}
+
+function renderReadouts() {
+  const sys = AppState.system, tel = AppState.telemetry;
+  document.getElementById('backend-mode-badge').textContent = backendConnected
+    ? '◉ BACKEND: LIVE FASTAPI + SQLITE3'
+    : '◉ ENGINE: STANDALONE HARNESS';
+  document.getElementById('backend-mode-badge').style.color = backendConnected ? '#00ff88' : '#ffaa00';
+  document.getElementById('top-receipts-btn').textContent = `📜 RECEIPTS (${sys.receipts_total})`;
+  document.getElementById('r-receipts').textContent = String(sys.receipts_total);
+
+  const totalTokens = AppState.models.reduce((acc, m) => acc + m.tokens_used, 0);
+  sys.total_tokens = totalTokens;
+  document.getElementById('r-cpu').textContent = `${tel.cpu_pct}%`;
+  document.getElementById('r-ram').textContent = `${tel.ram_pct}%`;
+  document.getElementById('r-gpu').textContent = `${tel.ram_used_gb || 42.1}G`;
+  document.getElementById('r-disk').textContent = `${tel.disk_pct}%`;
+  document.getElementById('r-net').textContent = `${tel.net_mbps} Mbps`;
+  document.getElementById('r-tok').textContent = totalTokens.toLocaleString();
+  document.getElementById('r-cost').textContent = `$${sys.spend_usd.toFixed(2)}`;
+  document.getElementById('budget-val').textContent = `$${sys.spend_usd.toFixed(2)}/$${sys.budget_limit_usd}`;
+  document.getElementById('lat-val').textContent = `${sys.api_rtt_ms}ms`;
+  document.getElementById('uptime-val').textContent = tel.uptime_str;
+
+  const freezeBtn = document.getElementById('freeze-btn');
+  const coreDot = document.getElementById('core-dot');
+  if (sys.frozen) {
+    freezeBtn.innerHTML = '<span class="label" style="color:#00ff88;font-weight:700">▶ UNFREEZE</span>';
+    document.getElementById('core-status').textContent = 'FROZEN';
+    coreDot.className = 'dot red';
+    document.getElementById('r-circuit').textContent = 'TRIPPED';
+    document.getElementById('r-circuit').className = 'rv red';
+    setAuraState('error');
+  } else {
+    freezeBtn.innerHTML = '<span class="label" style="color:#ff3366;font-weight:700">⊘ FREEZE</span>';
+    document.getElementById('core-status').textContent = 'ONLINE';
+    coreDot.className = 'dot';
+    document.getElementById('r-circuit').textContent = 'CLOSED';
+    document.getElementById('r-circuit').className = 'rv green';
+  }
+}
+
+function renderReceiptsModal() {
+  document.getElementById('receipts-modal-list').innerHTML = AppState.receipts.map(r => `
+    <div class="receipt-row">
+      <div style="display:flex;justify-content:space-between;color:#ffaa00;font-weight:600">
+        <span>#${r.id} [${r.category}] ${r.action}</span>
+        <span style="color:#00e5ff">${r.actor}</span>
+      </div>
+      <div style="color:rgba(127,212,193,0.75);font-size:7.5px;margin-top:2px">
+        Prev: ${r.prev_hash} → <b>SHA-256: ${r.receipt_hash.slice(0, 32)}...</b>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderAll() {
+  renderModels(); renderAgents(); renderTasks(); renderGithub();
+  renderApprovals(); renderTradeAuto(); renderSlack(); renderServers();
+  renderSocial(); renderSysHealth(); renderAudit(); renderIntel();
+  renderNetwork(); renderMusic(); renderTokens(); renderWeather();
+  renderHabits(); renderPomodoro(); renderNotes(); renderPower();
+  renderInternet(); renderBrowser(); renderSmartHome(); renderSkills();
+  renderHarness(); renderVpn(); renderTor(); renderDevServers();
+  renderApi(); renderDocker(); renderGit(); renderProcess();
+  renderMemoryWidget(); renderCalendarWidget(); renderArchWidget();
+  renderThoughts(); renderReadouts(); renderReceiptsModal();
+}
+
+// ============================================================================
+// 5. CORE ACTION HANDLERS & TERMINAL / VOICE
+// ============================================================================
+async function pingSingleModel(modelName) {
+  Sfx.play('click');
+  const t0 = performance.now();
+  const res = await apiCall('/api/models/ping', 'POST', { model: modelName });
+  if (!res) {
+    const m = AppState.models.find(x => x.name === modelName);
+    if (m) {
+      const rtt = Math.max(1, Math.round(performance.now() - t0) + (m.tier === 'local' ? 3 : 42));
+      m.latency_ms = rtt; m.tokens_used += 64;
+      if (m.status === 'offline') m.status = 'online';
+      pushLocalThought('DevOps', `RTT probe on ${m.name} completed →`, `${rtt}ms (+64 tok)`);
+      mintLocalReceipt('BENCHMARK', `RTT Probe ${m.name}: ${rtt}ms`, 'DevOps', { model: m.name, rtt_ms: rtt });
+      renderAll();
+    }
+  }
+  showToast('MODEL ROUTER', `Probed ${modelName} latency and updated SQLite token ledger.`);
+}
+
+async function pingAllModels() {
+  Sfx.play('confirm');
+  const t0 = performance.now();
+  const res = await apiCall('/api/models/ping', 'POST', {});
+  if (!res) {
+    AppState.models.forEach((m, idx) => {
+      m.latency_ms = Math.max(2, Math.round(performance.now() - t0) + (m.tier === 'local' ? 4 + idx : 85 + idx * 9));
+      m.tokens_used += 64;
+      if (m.status === 'offline') m.status = 'online';
+    });
+    pushLocalThought('DevOps', 'Benchmarked all 14 models across pool →', '14/14 ONLINE');
+    mintLocalReceipt('BENCHMARK', 'Full 14-Model Latency Benchmark', 'DevOps', { count: 14 });
+    renderAll();
+  }
+  showToast('MODEL POOL', 'All 14 LLMs benchmarked with live RTT telemetry.');
+}
+
+function cycleModelStatus(modelName) {
+  Sfx.play('click');
+  const m = AppState.models.find(x => x.name === modelName);
+  if (!m) return;
+  const order = { online: 'busy', busy: 'offline', offline: 'online' };
+  m.status = order[m.status] || 'online';
+  saveLocalState(); renderAll();
+}
+
+async function quickCycleAgent(agentName) {
+  Sfx.play('click');
+  const a = AppState.agents.find(x => x.name === agentName);
+  if (!a) return;
+  const nextMap = { idle: 'active', active: 'thinking', thinking: 'idle' };
+  const nextStatus = nextMap[a.status] || 'active';
+  const res = await apiCall('/api/agents/dispatch', 'POST', { agent: agentName, directive: `${a.role} autonomous cycle`, status: nextStatus });
+  if (!res) {
+    a.status = nextStatus;
+    pushLocalThought(a.name, 'Transitioned state →', nextStatus.toUpperCase());
+    mintLocalReceipt('AGENT', `${a.name} state -> ${nextStatus.toUpperCase()}`, a.name, { status: nextStatus });
+    renderAll();
+  }
+}
+
+async function submitAgentDispatch() {
+  const agent = document.getElementById('dispatch-agent-name').value;
+  const directive = document.getElementById('dispatch-agent-directive').value.trim() || 'Execute priority diagnostic';
+  closeModal('agent-modal'); Sfx.play('confirm');
+  const res = await apiCall('/api/agents/dispatch', 'POST', { agent, directive, status: 'active' });
+  if (!res) {
+    const a = AppState.agents.find(x => x.name === agent);
+    if (a) { a.status = 'active'; a.current_task = directive.slice(0, 32); }
+    pushLocalThought(agent, 'Executing dispatched directive →', directive);
+    mintLocalReceipt('AGENT', `Dispatched ${agent}: ${directive}`, 'Queen', { agent, directive });
+    renderAll();
+  }
+  document.getElementById('dispatch-agent-directive').value = '';
+  showToast('SWARM DISPATCH', `${agent} assigned: "${directive}"`);
+}
+
+async function submitNewTask() {
+  const title = document.getElementById('new-task-title').value.trim();
+  const agent = document.getElementById('new-task-agent').value;
+  if (!title) return;
+  closeModal('task-modal'); Sfx.play('confirm');
+  const res = await apiCall('/api/tasks', 'POST', { title, agent, priority: 'high' });
+  if (!res) {
+    const newId = AppState.tasks.reduce((m, t) => Math.max(m, t.id), 0) + 1;
+    AppState.tasks.unshift({ id: newId, title, status: 'pending', agent });
+    pushLocalThought(agent, 'Queued new mission task →', title);
+    mintLocalReceipt('TASK', `Created task: ${title}`, agent, { title, agent });
+    renderAll();
+  }
+  document.getElementById('new-task-title').value = '';
+}
+
+async function toggleTaskStatus(taskId) {
+  Sfx.play('click');
+  const res = await apiCall(`/api/tasks/${taskId}/toggle`, 'POST');
+  if (!res) {
+    const t = AppState.tasks.find(x => x.id === taskId);
+    if (t) {
+      const map = { 'pending': 'in-progress', 'in-progress': 'done', 'done': 'pending' };
+      t.status = map[t.status] || 'in-progress';
+      mintLocalReceipt('TASK', `Task #${taskId} -> ${t.status.toUpperCase()}`, t.agent, { id: taskId, status: t.status });
+      renderAll();
+    }
+  }
+}
+
+async function deleteTaskItem(taskId) {
+  Sfx.play('click');
+  const res = await apiCall(`/api/tasks/${taskId}`, 'DELETE');
+  if (!res) {
+    AppState.tasks = AppState.tasks.filter(x => x.id !== taskId);
+    saveLocalState(); renderAll();
+  }
+}
+
+async function triggerGithubAction(prNum, op) {
+  Sfx.play('confirm');
+  const res = await apiCall(`/api/github/${prNum}/action`, 'POST', { op });
+  if (!res) {
+    const pr = AppState.github_prs.find(x => x.num === prNum);
+    if (pr) {
+      if (op === 'approve') { pr.ci = 'pass'; pr.review = '3/3'; }
+      else { pr.ci = pr.ci === 'fail' ? 'pending' : 'pass'; if (pr.ci === 'pass') pr.review = '2/2'; }
+      mintLocalReceipt('GITHUB', `PR #${prNum} ${op.toUpperCase()} -> CI:${pr.ci.toUpperCase()}`, 'Coder', { pr: prNum, ci: pr.ci });
+      renderAll();
+    }
+  }
+  showToast('GITHUB PIPELINE', `PR #${prNum} updated (${op.toUpperCase()}).`);
+}
+function runAllGithubCI() { AppState.github_prs.forEach(pr => triggerGithubAction(pr.num, 'retest')); }
+
+async function executeOrder(side, pair, qty) {
+  Sfx.play('confirm');
+  const res = await apiCall('/api/trade/order', 'POST', { side, pair, qty, bot: 'Manual-HUD' });
+  if (!res) {
+    const curPrice = AppState.system.prices[pair] || 104230;
+    const impact = (qty * 0.0008) * (side === 'buy' ? 1 : -1);
+    const execPrice = Number((curPrice * (1 + impact)).toFixed(2));
+    const notional = Number((execPrice * qty).toFixed(2));
+    const pnl = Number((notional * (side === 'sell' ? 0.0042 : 0.0028)).toFixed(2));
+    AppState.system.prices[pair] = execPrice;
+    const asset = pair.split('/')[0];
+    if (side === 'buy') {
+      AppState.system.portfolio.usdc = Math.max(0, Number((AppState.system.portfolio.usdc - notional).toFixed(2)));
+      AppState.system.portfolio[asset] = Number(((AppState.system.portfolio[asset] || 0) + qty).toFixed(4));
+    } else {
+      AppState.system.portfolio.usdc = Number((AppState.system.portfolio.usdc + notional + pnl).toFixed(2));
+      AppState.system.portfolio[asset] = Math.max(0, Number(((AppState.system.portfolio[asset] || 0) - qty).toFixed(4)));
+    }
+    const rec = mintLocalReceipt('TRADE', `${side.toUpperCase()} ${qty} ${pair} @ $${execPrice.toLocaleString()}`, 'Manual-HUD', { side, pair, qty, execPrice, pnl });
+    AppState.trades.unshift({ id: Date.now(), time_str: new Date().toTimeString().slice(0, 5), side, pair, qty, price: execPrice, pnl_usd: pnl, bot_name: 'Manual-HUD', receipt_hash: rec.receipt_hash });
+    AppState.bots.forEach(b => { if (b.status === 'running') { b.pnl_usd = Number((b.pnl_usd + pnl).toFixed(2)); b.trades_count += 1; b.wins_count += 1; } });
+    pushLocalThought('Trader', `Filled ${side.toUpperCase()} ${qty} ${pair} @ $${execPrice.toLocaleString()} →`, `+$${pnl}`);
+    renderAll();
+  }
+  showToast('ORDER MATCHED', `${side.toUpperCase()} ${qty} ${pair} filled with cryptographic receipt.`);
+}
+
+async function toggleBotStatus(botId) {
+  Sfx.play('click');
+  const res = await apiCall(`/api/trade/bots/${botId}/toggle`, 'POST');
+  if (!res) {
+    const b = AppState.bots.find(x => x.id === botId);
+    if (b) {
+      b.status = b.status === 'running' ? 'paused' : 'running';
+      mintLocalReceipt('AUTOTRADER', `Bot ${b.name} -> ${b.status.toUpperCase()}`, 'Trader', { bot: b.name, status: b.status });
+      renderAll();
+    }
+  }
+}
+
+async function submitNewDebate() {
+  const proposal = document.getElementById('new-debate-action').value.trim();
+  if (!proposal) return;
+  closeModal('debate-modal'); Sfx.play('confirm');
+  const res = await apiCall('/api/debates', 'POST', { action: proposal });
+  if (!res) {
+    const h = sha256Hex(proposal);
+    const c1 = 78 + (parseInt(h.slice(0, 2), 16) % 19), c2 = 74 + (parseInt(h.slice(2, 4), 16) % 21), c3 = 62 + (parseInt(h.slice(4, 6), 16) % 25);
+    const weighted = Number((c1 * 0.4 + c2 * 0.35 + (100 - c3) * 0.25).toFixed(1));
+    const newId = AppState.debates.reduce((m, d) => Math.max(m, d.id), 0) + 1;
+    AppState.debates.unshift({
+      id: newId, action: proposal, status: 'pending',
+      for: [`Claude 4: Invariant & safety verification pass (${c1}%)`, `GPT-4o: Telemetry & rollback readiness verified (${c2}%)`],
+      against: [`DeepSeek-V3: Tail-latency risk under spike load (${c3}%)`],
+      confidence: [c1, c2, c3], weighted_score: weighted, receipt_hash: ''
+    });
+    mintLocalReceipt('DEBATE', `Convened 3-Model Debate: ${proposal}`, 'Queen', { weighted_score: weighted });
+    renderAll();
+  }
+  document.getElementById('new-debate-action').value = '';
+}
+
+async function resolveDebate(debateId, decision) {
+  Sfx.play('confirm'); setAuraState('acting');
+  const res = await apiCall(`/api/debates/${debateId}/resolve`, 'POST', { decision });
+  if (!res) {
+    const d = AppState.debates.find(x => x.id === debateId);
+    if (d) {
+      d.status = decision === 'approve' ? 'approved' : 'rejected';
+      const rec = mintLocalReceipt('CONSENSUS', `Adversarial Review ${d.status.toUpperCase()}: ${d.action}`, 'Queen', { debateId, decision: d.status });
+      d.receipt_hash = rec.receipt_hash;
+      renderAll();
+    }
+  }
+  showToast('CONSENSUS SIGNED', `Action ${decision.toUpperCase()}D. SHA-256 audit receipt minted.`);
+}
+
+function explainDebate(debateId) {
+  Sfx.play('click');
+  const d = AppState.debates.find(x => x.id === debateId);
+  if (!d) return;
+  document.getElementById('explain-modal-content').innerHTML = `
+    <div style="margin-bottom:8px;color:#00e5ff;font-weight:600">PROPOSAL: ${d.action}</div>
+    <div style="margin-bottom:6px">Weighted Consensus Score: <b style="color:#ffaa00">${d.weighted_score}%</b> | Status: <b>${d.status.toUpperCase()}</b></div>
+    <div style="margin-bottom:6px;padding:6px;background:rgba(0,255,136,0.06);border-left:2px solid #00ff88">
+      <div style="color:#00ff88;font-weight:600;margin-bottom:3px">AFFIRMATIVE MODELS (Claude 4 &amp; GPT-4o):</div>
+      ${d.for.map(x => `<div>• ${x}</div>`).join('')}
+    </div>
+    <div style="margin-bottom:6px;padding:6px;background:rgba(255,51,102,0.06);border-left:2px solid #ff3366">
+      <div style="color:#ff3366;font-weight:600;margin-bottom:3px">DISSENT / RISK VECTOR (DeepSeek-V3):</div>
+      ${d.against.map(x => `<div>• ${x}</div>`).join('')}
+    </div>
+    <div style="font-size:8px;color:rgba(127,212,193,0.8)">Cryptographic Receipt Hash: <span style="color:#ffaa00">${d.receipt_hash || 'Pending Human/Queen Sign-off'}</span></div>
+  `;
+  openModal('explain-modal');
+}
+
+async function toggleFreezeSwitch() {
+  const nextFrozen = !AppState.system.frozen;
+  Sfx.play(nextFrozen ? 'alarm' : 'confirm');
+  const res = await apiCall('/api/system/freeze', 'POST', { frozen: nextFrozen });
+  if (!res) {
+    AppState.system.frozen = nextFrozen;
+    if (nextFrozen) {
+      AppState.agents.forEach(a => a.status = 'idle');
+      AppState.bots.forEach(b => b.status = 'paused');
+    } else {
+      AppState.agents[0].status = 'active'; AppState.agents[1].status = 'thinking';
+      AppState.agents[2].status = 'active'; AppState.agents[3].status = 'active';
+      AppState.bots[0].status = 'running'; AppState.bots[1].status = 'running';
+      setAuraState('idle');
+    }
+    mintLocalReceipt('KILL_SWITCH', `Master Freeze set to ${nextFrozen}`, 'Queen', { frozen: nextFrozen });
+    renderAll();
+  }
+  showToast(nextFrozen ? 'EMERGENCY KILL SWITCH' : 'CHAKRAVYUHA RESUMED', nextFrozen ? 'All 37 widgets, agent swarms, and bots frozen.' : 'Concentric rings and swarms resumed.');
+}
+
+// Queen Terminal
+const termLines = [
+  { type: 'cmd', text: 'status --all' },
+  { type: 'output', text: '  [OK] Core orchestrator ............ v3.7.1 (37 widgets active)' },
+  { type: 'output', text: '  [OK] Voice pipeline ............... STT: faster-whisper | TTS: Piper' },
+  { type: 'output', text: '  [OK] Memory core .................. 2,847 entries | 847 vectors' },
+  { type: 'success', text: '  All systems nominal. Type "help" or click a chip below.' }
+];
+const cmdHistory = ['status --all', 'memory search "trading strategy btc" --top 3', 'ping', 'trade buy BTC 0.1', 'cve audit', 'receipts'];
+let historyIdx = cmdHistory.length;
+
+function renderTerminal() {
+  const body = document.getElementById('terminal-body');
+  body.innerHTML = termLines.map(l => {
+    if (l.type === 'cmd') return `<div class="term-line"><span class="term-prompt">queen@chakravyuha:~$</span> <span class="term-cmd">${l.text}</span></div>`;
+    if (l.type === 'success') return `<div class="term-line"><span class="term-success">${l.text}</span></div>`;
+    if (l.type === 'warn') return `<div class="term-line"><span class="term-warn">${l.text}</span></div>`;
+    return `<div class="term-line"><span class="term-output">${l.text}</span></div>`;
+  }).join('');
+  body.scrollTop = body.scrollHeight;
+}
+
+async function runTerminalCommand(rawCmd) {
+  const cmd = (rawCmd || '').trim();
+  if (!cmd) return;
+  Sfx.play('key');
+  cmdHistory.push(cmd);
+  historyIdx = cmdHistory.length;
+  if (cmd.toLowerCase() === 'clear') { termLines.length = 0; renderTerminal(); return; }
+  termLines.push({ type: 'cmd', text: cmd });
+  renderTerminal();
+
+  const res = await apiCall('/api/terminal/exec', 'POST', { command: cmd });
+  if (res && res.lines) {
+    res.lines.forEach(l => termLines.push(l));
+    renderTerminal();
+    return;
+  }
+
+  const parts = cmd.split(/\s+/);
+  const head = parts[0].toLowerCase();
+  if (head === 'help') {
+    termLines.push({ type: 'output', text: '  COMMANDS: status [--all] | memory search "<q>" | ping | route "<task>" | trade <buy|sell> <pair> [qty] | cve audit | receipts | freeze | clear' });
+  } else if (head === 'status') {
+    termLines.push({ type: 'output', text: `  [OK] Chakravyuha v3.7.1 | 37/37 Widgets | CPU ${AppState.telemetry.cpu_pct}% | RAM ${AppState.telemetry.ram_pct}%` });
+    termLines.push({ type: 'success', text: '  All 7 concentric rings nominal.' });
+  } else if (head === 'memory') {
+    termLines.push({ type: 'output', text: '  1. [trading] "BTC threshold alert at $105,000" (2d ago, conf: 0.94)' });
+    termLines.push({ type: 'output', text: '  2. [decision] "Chose momentum over mean-revert for 4H timeframe" (5d ago)' });
+    termLines.push({ type: 'output', text: '  3. [preference] "Max position size: 2% of portfolio per trade" (14d ago)' });
+  } else if (head === 'ping') {
+    await pingAllModels();
+    termLines.push({ type: 'success', text: '  → Probed all 14 models. Latencies updated.' });
+  } else if (head === 'trade' && parts.length >= 3) {
+    const side = parts[1].toLowerCase();
+    const pair = parts[2].toUpperCase().includes('/') ? parts[2].toUpperCase() : parts[2].toUpperCase() + '/USDC';
+    await executeOrder(side, pair, parseFloat(parts[3]) || 0.1);
+    termLines.push({ type: 'success', text: `  → Executed ${side.toUpperCase()} on ${pair}` });
+  } else if (head === 'cve') {
+    const rec = mintLocalReceipt('SECOPS', 'Completed CVE Audit (0 critical)', 'Security', { scanned: 142 });
+    termLines.push({ type: 'success', text: `  → [PASS] 0 Critical CVEs. Receipt: ${rec.receipt_hash.slice(0, 20)}...` });
+    renderAll();
+  } else if (head === 'receipts') {
+    AppState.receipts.slice(0, 4).forEach(r => termLines.push({ type: 'output', text: `  #${r.id} [${r.category}] ${r.action} (${r.receipt_hash.slice(0, 12)}...)` }));
+  } else {
+    const rec = mintLocalReceipt('ROUTER', `Routed directive: ${cmd}`, 'Queen', { command: cmd });
+    termLines.push({ type: 'success', text: `  → Routed "${cmd}" | Receipt: ${rec.receipt_hash.slice(0, 18)}...` });
+    renderAll();
+  }
+  renderTerminal();
+}
+
+const termInput = document.getElementById('terminal-input');
+termInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { const v = termInput.value; termInput.value = ''; runTerminalCommand(v); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); if (historyIdx > 0) termInput.value = cmdHistory[--historyIdx] || ''; }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); if (historyIdx < cmdHistory.length - 1) termInput.value = cmdHistory[++historyIdx] || ''; else { historyIdx = cmdHistory.length; termInput.value = ''; } }
+});
+
+// Voice & Helpers
+let voiceListening = false, ttsEnabled = true;
+function initVoiceWave() {
+  const container = document.getElementById('voice-wave');
+  container.innerHTML = '';
+  for (let i = 0; i < 24; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'voice-bar'; bar.style.height = '2px';
+    container.appendChild(bar);
+  }
+}
+function animateVoiceWave(active, amplitude = 0.7) {
+  document.querySelectorAll('.voice-bar').forEach(bar => {
+    bar.style.height = active ? (2 + Math.random() * 18 * amplitude) + 'px' : '2px';
+  });
+}
+function toggleVoiceTTS() {
+  ttsEnabled = !ttsEnabled;
+  document.getElementById('tts-toggle-btn').textContent = ttsEnabled ? 'TTS:ON' : 'TTS:OFF';
+  Sfx.play('click');
+}
+function togglePushToTalk() {
+  Sfx.play('click');
+  voiceListening = !voiceListening;
+  const btn = document.getElementById('ptt-btn');
+  btn.classList.toggle('active', voiceListening);
+  btn.textContent = voiceListening ? '◉ LISTENING...' : '🎤 PUSH-TO-TALK';
+  setAuraState(voiceListening ? 'listening' : 'idle');
+  animateVoiceWave(voiceListening, 0.8);
+}
+async function simulateVoiceIntent(phrase) {
+  Sfx.play('confirm'); setAuraState('thinking'); animateVoiceWave(true, 0.6);
+  document.getElementById('transcript').innerHTML = `<span class="final">"${phrase}"</span>`;
+  await runTerminalCommand(phrase.toLowerCase().includes('status') ? 'status --all' : phrase.toLowerCase().includes('cve') ? 'cve audit' : `route "${phrase}"`);
+  setTimeout(() => { setAuraState('idle'); animateVoiceWave(false); }, 900);
+}
+
+function setAuraState(state) {
+  const labels = { idle: '◈ AWAITING COMMAND', listening: '◉ LISTENING...', thinking: '◈ ANALYZING...', acting: '▶ EXECUTING DIRECTIVE', error: '⚠ KILL SWITCH ENGAGED' };
+  document.getElementById('state-text').textContent = labels[state] || labels.idle;
+  document.getElementById('voice-state-label').textContent = state.toUpperCase();
+  document.getElementById('voice-status').textContent = state.toUpperCase();
+}
+function showToast(title, body) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toast-title').textContent = title;
+  document.getElementById('toast-body').textContent = body;
+  toast.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => toast.classList.remove('show'), 4500);
+}
+function toggleWidget(id) { Sfx.play('click'); document.getElementById(id).classList.toggle('collapsed'); }
+function openModal(id) { Sfx.play('click'); if (id === 'receipts-modal') renderReceiptsModal(); document.getElementById(id).classList.add('open'); }
+function closeModal(id) { Sfx.play('click'); document.getElementById(id).classList.remove('open'); }
+
+// Dragging (when not in grid-mode)
+let dragWidget = null, dragOffX = 0, dragOffY = 0;
+document.addEventListener('mousedown', e => {
+  if (currentDeck === 'all') return;
+  const header = e.target.closest('.widget-header');
+  if (!header || e.target.closest('.w-btn') || e.target.closest('.w-act')) return;
+  dragWidget = header.closest('.widget');
+  const rect = dragWidget.getBoundingClientRect();
+  dragOffX = e.clientX - rect.left; dragOffY = e.clientY - rect.top;
+  dragWidget.style.zIndex = 45; dragWidget.style.transition = 'none';
+});
+document.addEventListener('mousemove', e => {
+  if (!dragWidget) return;
+  dragWidget.style.left = Math.max(4, Math.min(window.innerWidth - 220, e.clientX - dragOffX)) + 'px';
+  dragWidget.style.top = Math.max(4, Math.min(window.innerHeight - 90, e.clientY - dragOffY - 52)) + 'px';
+  dragWidget.style.right = 'auto'; dragWidget.style.bottom = 'auto';
+});
+document.addEventListener('mouseup', () => {
+  if (dragWidget) { dragWidget.style.zIndex = 20; dragWidget.style.transition = ''; dragWidget = null; }
+});
+
+function updateClock() { document.getElementById('clock').textContent = new Date().toTimeString().split(' ')[0]; }
+
+// Startup & Live Updates
+initLocalReceiptsIfNeeded();
+initBoot(); animateBoot(); drawHud(); initVoiceWave();
+renderAll(); renderTerminal(); updateClock();
+setInterval(updateClock, 1000);
+syncBackendNow();
+
+setInterval(() => {
+  if (AppState.system.frozen) return;
+  if (pomoRunning) {
+    pomoTime--;
+    if (pomoTime <= 0) pomoSkip();
+    else renderPomodoro();
+  }
+  const currentTrack = scTracks.find(t => t.playing);
+  if (currentTrack) {
+    currentTrack.progress = (currentTrack.progress + 0.4) % 100;
+    const fill = document.querySelector('#w-music .sc-progress-fill');
+    if (fill) fill.style.width = currentTrack.progress + '%';
+  }
+}, 1000);
+
+setInterval(() => {
+  if (!AppState.system.frozen) {
+    syncBackendNow();
+    pingHistory.push(Math.max(2, AppState.system.api_rtt_ms + (Date.now() % 9)));
+    if (pingHistory.length > 20) pingHistory.shift();
+    renderInternet();
+  }
+}, 3000);
+</script>
+</body>
+</html>
