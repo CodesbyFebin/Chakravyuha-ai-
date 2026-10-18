@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const basePath = '/Chakravyuha-ai-';
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const storageKey = 'chakravyuha-api-base';
 
 export default function HudFrame() {

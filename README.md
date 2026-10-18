@@ -14,10 +14,10 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000/Chakravyuha-ai-/`.
+Open `http://localhost:3000/`.
 
 ## Deploy with GitHub Pages
 
-Push to `main`; the workflow builds a static Next.js export and deploys it to Pages. In repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. The expected project URL is `https://codesbyfebin.github.io/Chakravyuha-ai-/`.
+Push to `main`; the workflow builds a static Next.js export with the GitHub Pages subpath and deploys it to Pages. Vercel builds without that subpath and serves the app at the project root. In repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. The expected project URL is `https://codesbyfebin.github.io/Chakravyuha-ai-/`.
 
 GitHub Pages serves static files only. Widget UI interactions and local fallback behavior run in the browser. To use API-backed data, deploy `backend/server.py` separately and save its HTTPS base URL in the **Backend API** field. The SQLite database is initialized at runtime and must use persistent storage on that host.
